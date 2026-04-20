@@ -1,0 +1,2640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>像素武侠：影之刃 - 四关试炼</title>
+    <style>
+        @font-face {
+            font-family: 'zpix';
+            src: url('https://cdn.jsdelivr.net/npm/zpix-pixel-font@3.1.0/zpix.woff2') format('woff2');
+            font-display: swap;
+        }
+        :root {
+            --bg-color: #06060a;
+            --frame-gold: #c8a800;
+            --gold: #ffd700;
+            --cinnabar: #912222;
+            --moon-white: #ffe8a0;
+            --emerald: #ffd700;
+        }
+        * { -webkit-font-smoothing: none; -moz-osx-font-smoothing: unset; font-smooth: never; }
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 20% 80%, rgba(145,34,34,0.04) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(212,175,55,0.03) 0%, transparent 50%);
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden; font-family: 'zpix', monospace;
+        }
+        #game-container {
+            position: relative; border: 3px solid var(--frame-gold);
+            outline: 1px solid #3a3000; outline-offset: 4px;
+            box-shadow:
+                0 0 0 1px #0a0800,
+                0 0 0 6px #1a1500,
+                0 0 0 7px var(--frame-gold),
+                0 0 40px rgba(0,0,0,0.95),
+                0 0 80px rgba(200,168,0,0.1),
+                inset 0 0 30px rgba(0,0,0,0.5);
+        }
+        canvas {
+            display: block; background-color: #0a0a0e;
+            image-rendering: pixelated; image-rendering: crisp-edges;
+            width: 960px; height: 540px;
+        }
+        #crt-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18,16,0,0) 50%, rgba(0,0,0,0.12) 50%),
+                linear-gradient(90deg, rgba(255,215,0,0.02), rgba(180,150,0,0.01), rgba(255,215,0,0.02)),
+                radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.5) 100%);
+            background-size: 100% 4px, 8px 100%, 100% 100%;
+            pointer-events: none; z-index: 5;
+        }
+        #ui-layer {
+            position: absolute; top: 8px; left: 8px; color: var(--gold);
+            pointer-events: none; font-size: 10px; line-height: 1.8; z-index: 6;
+        }
+        #status {
+            background: rgba(10,8,0,0.8); border: 1px solid rgba(200,168,0,0.4);
+            padding: 4px 8px; text-shadow: 1px 1px 0 #000; letter-spacing: 1px;
+        }
+        #level-display {
+            margin-top: 4px; background: rgba(15,10,0,0.85);
+            border: 1px solid rgba(255,215,0,0.5); padding: 4px 10px;
+            text-shadow: 1px 1px 0 #000; font-size: 11px;
+        }
+        #level-display .label { color: #ffd700; }
+        #level-display .number { color: #ffe44d; font-size: 14px; text-shadow: 0 0 6px rgba(255,215,0,0.6), 0 0 12px rgba(255,215,0,0.2); }
+        #level-display .name { color: #ffdd66; font-size: 9px; margin-left: 4px; }
+        #stop-display {
+            margin-top: 4px; background: rgba(15,10,0,0.85);
+            border: 1px solid rgba(255,215,0,0.45); padding: 4px 10px;
+            text-shadow: 1px 1px 0 #000; display: none; font-size: 10px; letter-spacing: 1px;
+        }
+        #stop-display .label { color: #ffd700; }
+        #stop-display .seconds { color: #ffe44d; font-size: 14px; text-shadow: 0 0 6px rgba(255,215,0,0.6), 0 0 12px rgba(255,215,0,0.2); }
+        #stop-display .bar-bg { display: block; margin-top: 3px; width: 100px; height: 3px; background: rgba(30,25,0,0.6); border: 1px solid rgba(200,168,0,0.35); }
+        #stop-display .bar-fill { display: block; height: 100%; background: #ffd700; transition: width 0.15s linear; }
+        #rewind-display {
+            margin-top: 4px; background: rgba(15,10,0,0.85);
+            border: 1px solid rgba(255,200,0,0.4); padding: 3px 8px;
+            text-shadow: 1px 1px 0 #000; display: none; font-size: 9px; color: #ffcc00;
+        }
+        #mark-hint {
+            margin-top: 4px; color: #cca800; background: rgba(10,8,0,0.7);
+            border: 1px solid rgba(200,168,0,0.25); padding: 3px 8px;
+            text-shadow: 1px 1px 0 #000; display: none; font-size: 9px;
+        }
+        #save-indicator {
+            position: absolute; top: 8px; right: 8px; color: #ffd700;
+            background: rgba(15,10,0,0.85); border: 1px solid rgba(255,215,0,0.45);
+            padding: 3px 8px; font-size: 8px; pointer-events: none; z-index: 6;
+            opacity: 0; transition: opacity 0.3s; text-shadow: 0 0 4px rgba(255,215,0,0.5);
+        }
+        #checkpoint-hint {
+            position: absolute; bottom: 8px; left: 8px; color: #ffd700;
+            background: rgba(15,10,0,0.85); border: 1px solid rgba(255,215,0,0.35);
+            padding: 3px 8px; font-size: 8px; pointer-events: none; z-index: 6;
+            opacity: 0; transition: opacity 0.3s; text-shadow: 0 0 4px rgba(255,215,0,0.5);
+        }
+        #msg-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            color: var(--moon-white); text-align: center; display: none; font-size: 11px;
+            z-index: 8; background: rgba(5,3,0,0.94);
+            box-shadow: 0 0 30px rgba(0,0,0,0.9), inset 0 0 20px rgba(0,0,0,0.6);
+        }
+        #msg-screen h2 { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scaleY(1.2); margin: 0; font-weight: bold; letter-spacing: 2px; font-size: 72px; text-shadow: 0 0 10px var(--gold), 0 0 20px var(--gold), 0 0 40px var(--gold), 2px 2px 0 #000; line-height: 1; white-space: nowrap; }
+        #msg-screen p { position: absolute; top: 70%; left: 50%; transform: translateX(-50%); margin: 0; color: #ffd700; font-size: 16px; text-shadow: 0 0 8px rgba(255,215,0,0.7), 0 0 16px rgba(255,215,0,0.3), 1px 1px 0 #000; z-index: 10; }
+        #msg-screen::after {
+            content: '影'; position: absolute; bottom: -10px; right: -10px;
+            font-size: 20px; color: rgba(200,168,0,0.5);
+            border: 1px solid rgba(200,168,0,0.35); padding: 2px 4px; transform: rotate(-8deg);
+        }
+        #controls-hint {
+            position: absolute; bottom: 8px; right: 8px; color: rgba(200,168,0,0.4);
+            font-size: 8px; pointer-events: none; z-index: 6; text-align: right; line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+<div id="game-container">
+    <canvas id="gameCanvas" width="320" height="180"></canvas>
+    <div id="crt-overlay"></div>
+    <div id="ui-layer">
+        <div id="level-display">
+            <span class="label">第</span>
+            <span class="number" id="level-number">1</span>
+            <span class="label">关</span>
+            <span class="name" id="level-name"></span>
+        </div>
+        <div id="stop-display">
+            <span class="label">时空静止</span>
+            <span class="seconds" id="stop-seconds">4</span>s
+            <span class="bar-bg"><span class="bar-fill" id="stop-bar" style="width:100%"></span></span>
+        </div>
+        <div id="rewind-display">【时间回溯】</div>
+        <div id="mark-hint">靠近敌人标记，静止结束时斩杀</div>
+    </div>
+    <div id="save-indicator">已存档</div>
+    <div id="checkpoint-hint">复活点已记录</div>
+    <div id="msg-screen">
+        <h2 id="msg-text"></h2>
+        <p id="msg-sub">按 R 键从存档点复活</p>
+    </div>
+    <div id="controls-hint">
+        WASD 移动<br>
+        青色灵珠: 时空静止<br>
+        蓝色菱形: 时间回溯<br>
+        绿宝石: 存档复活点<br>
+        静止中不动可预判敌踪
+    </div>
+</div>
+
+<script>
+/* ==================== 像素化文字渲染系统 ==================== */
+var PixelFont = {
+    // 离屏Canvas用于大字体渲染
+    bigCanvas: null,
+    bigCtx: null,
+    scale: 4, // 放大倍数
+    
+    init: function() {
+        this.bigCanvas = document.createElement('canvas');
+        this.bigCanvas.width = 320 * this.scale;
+        this.bigCanvas.height = 180 * this.scale;
+        this.bigCtx = this.bigCanvas.getContext('2d');
+    },
+    
+    // 渲染像素化文字，返回像素数据数组
+    // text: 文字内容
+    // fontSize: 目标像素大小（实际渲染会放大）
+    // color: 文字颜色
+    // 返回: { width, height, pixels: [[x,y,color], ...] }
+    renderText: function(text, fontSize, color, outlineColor) {
+        if (!this.bigCanvas) this.init();
+        
+        var actualFontSize = fontSize * this.scale;
+        this.bigCtx.clearRect(0, 0, this.bigCanvas.width, this.bigCanvas.height);
+        
+        // 设置字体
+        this.bigCtx.font = 'bold ' + actualFontSize + 'px "Microsoft YaHei", "SimHei", sans-serif';
+        this.bigCtx.textAlign = 'center';
+        this.bigCtx.textBaseline = 'middle';
+        
+        var textX = this.bigCanvas.width / 2;
+        var textY = this.bigCanvas.height / 2;
+        
+        // 绘制描边
+        if (outlineColor) {
+            this.bigCtx.strokeStyle = outlineColor;
+            this.bigCtx.lineWidth = actualFontSize * 0.15;
+            this.bigCtx.lineJoin = 'round';
+            this.bigCtx.strokeText(text, textX, textY);
+        }
+        
+        // 绘制文字
+        this.bigCtx.fillStyle = color;
+        this.bigCtx.fillText(text, textX, textY);
+        
+        // 获取像素数据
+        var imgData = this.bigCtx.getImageData(0, 0, this.bigCanvas.width, this.bigCanvas.height);
+        var data = imgData.data;
+        
+        // 采样并生成像素数组
+        var pixels = [];
+        var scale = this.scale;
+        var targetWidth = Math.ceil(this.bigCanvas.width / scale);
+        var targetHeight = Math.ceil(this.bigCanvas.height / scale);
+        
+        for (var y = 0; y < targetHeight; y++) {
+            for (var x = 0; x < targetWidth; x++) {
+                // 采样点
+                var sx = Math.floor(x * scale + scale / 2);
+                var sy = Math.floor(y * scale + scale / 2);
+                var idx = (sy * this.bigCanvas.width + sx) * 4;
+                
+                var r = data[idx];
+                var g = data[idx + 1];
+                var b = data[idx + 2];
+                var a = data[idx + 3];
+                
+                // RGB最大值判断阈值
+                var maxRGB = Math.max(r, g, b);
+                
+                // 如果透明度足够且有颜色
+                if (a > 128 && maxRGB > 50) {
+                    // 判断是描边还是填充
+                    var isOutline = maxRGB < 100;
+                    var pixelColor = isOutline ? outlineColor : color;
+                    pixels.push({ x: x, y: y, color: pixelColor, isOutline: isOutline });
+                }
+            }
+        }
+        
+        // 计算实际边界
+        var minX = targetWidth, maxX = 0, minY = targetHeight, maxY = 0;
+        pixels.forEach(function(p) {
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+        });
+        
+        // 裁剪到实际内容区域
+        var croppedPixels = pixels.map(function(p) {
+            return { x: p.x - minX, y: p.y - minY, color: p.color, isOutline: p.isOutline };
+        });
+        
+        return {
+            width: maxX - minX + 1,
+            height: maxY - minY + 1,
+            pixels: croppedPixels,
+            offsetX: minX,
+            offsetY: minY
+        };
+    }
+};
+
+/* ==================== 关卡开始提示 ==================== */
+var LevelStartEffect = {
+    active: false,
+    timer: 0,
+    duration: 180, // 帧数（约3秒，更长展示时间）
+    titleText: null,
+    hintText: null,
+    tipText: null,
+    titleX: 0,
+    titleY: 0,
+    hintX: 0,
+    hintY: 0,
+    tipX: 0,
+    tipY: 0,
+    
+    show: function(level) {
+        // 渲染关卡标题（如"第一关"）
+        var levelTitle = '第' + ['一', '二', '三', '四'][level.id - 1] + '关';
+        this.titleText = PixelFont.renderText(
+            levelTitle,
+            12,
+            '#ffcc00',
+            '#1a1a1a'
+        );
+        
+        // 关卡提示文字使用zpix像素字体（如"击杀吭哧二将"）
+        this.hintStr = level.hint || '击杀所有敌人';
+        this.hintColor = '#ffdd44';
+        this.hintText = null; // 使用canvas直接绘制，带发光效果
+        
+        // 渲染操作提示小字
+        this.tipText = PixelFont.renderText(
+            'WASD移动 撞击击杀',
+            6,
+            '#aabbcc',
+            '#0a0a0a'
+        );
+        
+        // 计算居中位置
+        this.titleX = Math.floor((320 - this.titleText.width) / 2);
+        this.titleY = 60;
+        this.hintX = 160; // 居中
+        this.hintY = 85;
+        this.tipX = Math.floor((320 - this.tipText.width) / 2);
+        this.tipY = 105;
+        
+        this.active = true;
+        this.timer = 0;
+    },
+    
+    hide: function() {
+        this.active = false;
+        // 保留文本对象，以便在初始展示后绘制缩小的任务提示
+    },
+    
+    update: function() {
+        if (!this.active) return;
+        this.timer++;
+        if (this.timer >= this.duration) {
+            this.active = false;
+        }
+    },
+    
+    draw: function(ctx) {
+        if (!this.titleText) return;
+        
+        // 计算动画进度
+        var progress = this.timer / this.duration;
+        
+        if (this.active) {
+            // 初始展示阶段
+            var fadeIn = Math.min(1, this.timer / 20);
+            var fadeOut = progress > 0.6 ? (1 - progress) / 0.4 : 1;
+            var alpha = fadeIn * fadeOut;
+            
+            // 绘制标题像素文字
+            ctx.globalAlpha = alpha;
+            this.titleText.pixels.forEach(function(p) {
+                ctx.fillStyle = p.isOutline ? '#1a1a1a' : p.color;
+                ctx.fillRect(this.titleX + p.x, this.titleY + p.y, 1, 1);
+            }.bind(this));
+            
+            // 绘制提示文字（zpix像素字体，带发光）
+            if (this.hintStr) {
+                ctx.font = 'bold 10px zpix, monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                // 发光效果：多层阴影模拟CSS text-shadow
+                ctx.shadowColor = '#ffd700';
+                ctx.shadowBlur = 6;
+                ctx.fillStyle = this.hintColor;
+                ctx.fillText(this.hintStr, this.hintX, this.hintY);
+                ctx.fillText(this.hintStr, this.hintX, this.hintY);
+                ctx.shadowBlur = 12;
+                ctx.fillText(this.hintStr, this.hintX, this.hintY);
+                ctx.shadowBlur = 0;
+                ctx.shadowColor = 'transparent';
+                ctx.fillStyle = this.hintColor;
+                ctx.fillText(this.hintStr, this.hintX, this.hintY);
+                ctx.textAlign = 'left';
+            }
+            
+            // 绘制闪烁的小字提示
+            if (this.tipText) {
+                var tipAlpha = alpha * (0.5 + 0.5 * Math.sin(this.timer * 0.15));
+                ctx.globalAlpha = tipAlpha;
+                this.tipText.pixels.forEach(function(p) {
+                    ctx.fillStyle = p.isOutline ? '#0a0a0a' : p.color;
+                    ctx.fillRect(this.tipX + p.x, this.tipY + p.y, 1, 1);
+                }.bind(this));
+            }
+        } else {
+            // 缩小并移动到右边偏上阶段
+            ctx.globalAlpha = 1;
+            
+            // 缩小提示文字移到左下角（zpix像素字体，带发光）
+            if (this.hintStr) {
+                ctx.font = 'bold 11px zpix, monospace';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'bottom';
+                // 发光效果
+                ctx.shadowColor = '#ffd700';
+                ctx.shadowBlur = 4;
+                ctx.fillStyle = this.hintColor;
+                ctx.fillText(this.hintStr, 5, 175);
+                ctx.fillText(this.hintStr, 5, 175);
+                ctx.shadowBlur = 8;
+                ctx.fillText(this.hintStr, 5, 175);
+                ctx.shadowBlur = 0;
+                ctx.shadowColor = 'transparent';
+                ctx.fillStyle = this.hintColor;
+                ctx.fillText(this.hintStr, 5, 175);
+            }
+        }
+        
+        ctx.globalAlpha = 1;
+    }
+};
+
+/* ==================== 关卡系统定义 ==================== */
+// 每个关卡是独立的320像素宽地图
+var LEVELS = [
+    { 
+        id: 1, 
+        name: "风雪夜战",
+        hint: "击杀吭哧二将",
+        width: 960,
+        tunnelTop: 2, tunnelBot: 178,
+        playerStart: { x: 40, y: 90 },
+        enemies: [
+            { type: 'ShieldDefender', x: 500, y: 85, name: '哧吭', armor: 'white', tall: false },
+            { type: 'ShieldPartner', x: 525, y: 85, name: '吭哧', armor: 'black', tall: true }
+        ],
+        covers: [
+            { x: 200, y: 25, w: 12, h: 15, side: 'top' },
+            { x: 500, y: 145, w: 12, h: 15, side: 'bottom' },
+            { x: 580, y: 40, w: 12, h: 15, side: 'top' }
+        ],
+        pearls: [],
+        rewindItem: null,
+        checkpoint: { x: 120, y: 90 },
+        scarecrowRow: { x: 200, yStart: 8, yEnd: 170, count: 5, hintShown: false }
+    },
+    { 
+        id: 2, 
+        name: "迷途暗影",
+        hint: "击杀所有敌人",
+        width: 320,
+        tunnelTop: 66, tunnelBot: 114,
+        playerStart: { x: 20, y: 84 },
+        enemies: [
+            { type: 'Enemy', x: 80, y: 72 },
+            { type: 'Enemy', x: 160, y: 96 },
+            { type: 'Enemy', x: 240, y: 80 }
+        ],
+        covers: [
+            { x: 60, y: 66, w: 10, h: 12, side: 'top' },
+            { x: 130, y: 102, w: 10, h: 12, side: 'bottom' },
+            { x: 200, y: 66, w: 10, h: 12, side: 'top' }
+        ],
+        pearls: [{ x: 280, y: 90 }],
+        rewindItem: null,
+        checkpoint: { x: 50, y: 90 }
+    },
+    { 
+        id: 3, 
+        name: "幻境试炼",
+        hint: "击杀所有敌人",
+        width: 320,
+        tunnelTop: 78, tunnelBot: 102,
+        playerStart: { x: 20, y: 84 },
+        enemies: [
+            { type: 'Enemy', x: 60, y: 80 },
+            { type: 'Enemy', x: 130, y: 92 },
+            { type: 'Enemy', x: 200, y: 80 },
+            { type: 'Enemy', x: 270, y: 82 }
+        ],
+        covers: [
+            { x: 40, y: 78, w: 10, h: 12, side: 'top' },
+            { x: 100, y: 90, w: 10, h: 12, side: 'bottom' },
+            { x: 170, y: 78, w: 10, h: 12, side: 'top' },
+            { x: 240, y: 90, w: 10, h: 12, side: 'bottom' }
+        ],
+        pearls: [],
+        rewindItem: { x: 280, y: 90 },
+        checkpoint: { x: 50, y: 90 }
+    },
+    { 
+        id: 4, 
+        name: "最终试炼",
+        hint: "击杀所有敌人通关",
+        width: 320,
+        tunnelTop: 66, tunnelBot: 114,
+        playerStart: { x: 20, y: 84 },
+        enemies: [
+            { type: 'Enemy', x: 50, y: 80 },
+            { type: 'Enemy', x: 100, y: 92 },
+            { type: 'Enemy', x: 150, y: 72 },
+            { type: 'Enemy', x: 200, y: 96 },
+            { type: 'Enemy', x: 250, y: 80 },
+            { type: 'Enemy', x: 290, y: 88 }
+        ],
+        covers: [
+            { x: 30, y: 66, w: 10, h: 12, side: 'top' },
+            { x: 80, y: 102, w: 10, h: 12, side: 'bottom' },
+            { x: 130, y: 66, w: 10, h: 12, side: 'top' },
+            { x: 180, y: 102, w: 10, h: 12, side: 'bottom' },
+            { x: 230, y: 66, w: 10, h: 12, side: 'top' },
+            { x: 280, y: 102, w: 10, h: 12, side: 'bottom' }
+        ],
+        pearls: [{ x: 150, y: 90 }],
+        rewindItem: null,
+        checkpoint: { x: 50, y: 90 }
+    }
+];
+
+/* ==================== 存档系统 ==================== */
+var SAVE_KEY = 'moon_blade_save_v2';
+
+function saveGame() {
+    var saveData = {
+        currentLevel: state.currentLevel,
+        playerX: state.player.x,
+        playerY: state.player.y,
+        hasRewind: hasRewind,
+        checkpoint: state.lastCheckpoint,
+        timestamp: Date.now()
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+    showSaveIndicator();
+}
+
+function loadGame() {
+    var saved = localStorage.getItem(SAVE_KEY);
+    if (saved) {
+        try {
+            var saveData = JSON.parse(saved);
+            return saveData;
+        } catch(e) {
+            return null;
+        }
+    }
+    return null;
+}
+
+function showSaveIndicator() {
+    var indicator = document.getElementById('save-indicator');
+    indicator.style.opacity = '1';
+    setTimeout(function() {
+        indicator.style.opacity = '0';
+    }, 1500);
+}
+
+function showCheckpointHint() {
+    var hint = document.getElementById('checkpoint-hint');
+    hint.style.opacity = '1';
+    setTimeout(function() {
+        hint.style.opacity = '0';
+    }, 2000);
+}
+
+/* ==================== 游戏核心变量 ==================== */
+var PAL = {
+    ink:'#0a0a0e',darkInk:'#1a1a1e',stone:'#3a3830',lightStone:'#5a5850',
+    white:'#e8e0d0',cinnabar:'#912222',darkCinn:'#601515',
+    gold:'#d4af37',darkGold:'#8b6914',bamboo:'#2d5c2d',darkBamboo:'#1a3a1a',
+    skin:'#d4a574',darkSkin:'#a07850',straw:'#5c4533',darkStraw:'#3a2a1e',
+    pearl:'#00cccc',mtFar:'#10101a',mtMid:'#181824',mtNear:'#20202e',
+    ground:'#1a1810',groundLt:'#252218',pathStone:'#302d24',pathLt:'#3a3730',
+    ninja:'#3a3a40',ninjaDark:'#22222a',ninjaTrim:'#555560',
+    emerald:'#00ff88',emeraldDark:'#00cc66'
+};
+
+var canvas = document.getElementById('gameCanvas');
+var ctx = canvas.getContext('2d');
+var msgScreen = document.getElementById('msg-screen');
+var msgText = document.getElementById('msg-text');
+var msgSub = document.getElementById('msg-sub');
+
+var markHint = document.getElementById('mark-hint');
+var stopDisplay = document.getElementById('stop-display');
+var stopSecondsEl = document.getElementById('stop-seconds');
+var stopBarEl = document.getElementById('stop-bar');
+var rewindDisplay = document.getElementById('rewind-display');
+var levelNumberEl = document.getElementById('level-number');
+var levelNameEl = document.getElementById('level-name');
+
+var STOP_DURATION = 4000;
+var PUSH_RANGE = 75;
+var PUSH_FORCE = 0.35;
+var MARK_RANGE = 22;
+var ATTACK_RANGE = 120;
+var PLAYER_SPEED_NORMAL = 1.5;
+var PLAYER_SPEED_STOP = 5.0;
+var KNIFE_INIT_SPD = 0.25;
+var KNIFE_ACCEL = 0.018;
+var KNIFE_MAX_SPD = 2.2;
+var REWIND_FRAMES = 300;
+var REWIND_SPEED = 3;
+
+function px(n) { return Math.floor(n); }
+
+function drawPxCircle(cx, cy, r, color) {
+    cx = px(cx); cy = px(cy); ctx.fillStyle = color;
+    for (var dy = -r; dy <= r; dy++)
+        for (var dx = -r; dx <= r; dx++)
+            if (dx*dx+dy*dy <= r*r) ctx.fillRect(cx+dx, cy+dy, 1, 1);
+}
+
+function hasLineOfSight(x1, y1, x2, y2) {
+    var dx = x2 - x1;
+    var dy = y2 - y1;
+    var dist = Math.hypot(dx, dy);
+    if (dist < 1) return true;
+    
+    var steps = Math.ceil(dist / 3);
+    for (var i = 1; i < steps; i++) {
+        var t = i / steps;
+        var checkX = x1 + dx * t;
+        var checkY = y1 + dy * t;
+        
+        for (var j = 0; j < state.covers.length; j++) {
+            var cv = state.covers[j];
+            if (checkX >= cv.x && checkX <= cv.x + cv.w &&
+                checkY >= cv.y && checkY <= cv.y + cv.h) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+var shake = {x:0,y:0,intensity:0,frames:0};
+function triggerShake(i,f){shake.intensity=i;shake.frames=f;}
+function updateShake(){
+    if(shake.frames>0){shake.x=(Math.random()-0.5)*shake.intensity*2;shake.y=(Math.random()-0.5)*shake.intensity*2;shake.frames--;}
+    else{shake.x=0;shake.y=0;}
+}
+
+var ambientParts = [];
+function initAmbient(){
+    ambientParts=[];
+    var level = LEVELS[state.currentLevel - 1];
+    var isSnow = (level.id === 1);
+    var count = isSnow ? 80 : 25;
+    for(var i=0;i<count;i++){
+        var rx=Math.random()*level.width;
+        var ry;
+        if(isSnow){
+            ry=Math.random()*180;
+        }else{
+            ry=level.tunnelTop+Math.random()*(level.tunnelBot-level.tunnelTop);
+        }
+        ambientParts.push({
+            x:rx, y:ry,
+            vx:(Math.random()-0.5)*(isSnow?0.4:0.15),
+            vy:isSnow?(Math.random()*0.6+0.3):(Math.random()-0.5)*0.06,
+            phase:Math.random()*Math.PI*2,
+            bright:Math.random()>0.6,
+            size:isSnow?(Math.random()>0.7?2:1):1
+        });
+    }
+}
+function updateAmbient(){
+    var level = LEVELS[state.currentLevel - 1];
+    var isSnow = (level.id === 1);
+    ambientParts.forEach(function(p){
+        p.x+=p.vx+Math.sin(p.phase)*(isSnow?0.12:0.05);
+        p.y+=p.vy;
+        p.phase+=0.02;
+        if(isSnow){
+            if(p.y>185||p.x<-10||p.x>level.width+10){
+                p.x=Math.random()*level.width;
+                p.y=-5-Math.random()*20;
+                p.phase=Math.random()*Math.PI*2;
+            }
+        }else{
+            if(p.y<level.tunnelTop||p.y>level.tunnelBot||p.x<-5||p.x>325){
+                p.x=Math.random()*320;
+                p.y=level.tunnelTop+Math.random()*(level.tunnelBot-level.tunnelTop);
+                p.phase=Math.random()*Math.PI*2;
+            }
+        }
+    });
+}
+function drawAmbient(){
+    var level = LEVELS[state.currentLevel - 1];
+    var isSnow = (level.id === 1);
+    ambientParts.forEach(function(p){
+        if(isSnow){
+            var a=0.5+Math.sin(p.phase)*0.3;
+            ctx.fillStyle='rgba(210,225,255,'+a+')';
+            ctx.fillRect(px(p.x),px(p.y),p.size,p.size);
+            if(p.size>1){
+                ctx.globalAlpha=a*0.4;
+                ctx.fillRect(px(p.x)+1,px(p.y),1,1);
+                ctx.globalAlpha=1;
+            }
+        }else{
+            var a=0.3+Math.sin(p.phase)*0.25;
+            if(p.bright){
+                ctx.fillStyle='rgba(212,175,55,'+a+')';ctx.fillRect(px(p.x),px(p.y),1,1);
+                ctx.fillStyle='rgba(212,175,55,'+(a*0.3)+')';ctx.fillRect(px(p.x)-1,px(p.y),1,1);ctx.fillRect(px(p.x)+1,px(p.y),1,1);
+            }else{
+                ctx.fillStyle='rgba(180,170,140,'+(a*0.5)+')';ctx.fillRect(px(p.x),px(p.y),1,1);
+            }
+        }
+    });
+}
+
+/* ==================== 关卡背景渲染 ==================== */
+var bgCanvas = document.createElement('canvas');
+bgCanvas.width=320;bgCanvas.height=180;
+var bgCtx = bgCanvas.getContext('2d');
+
+function renderLevelBG(level) {
+    var c = bgCtx;
+    var w = level.width;
+    // 调整bgCanvas宽度以适配宽地图
+    if (bgCanvas.width !== w) bgCanvas.width = w;
+    
+    if (level.id === 1) {
+        renderSnowBG(c, w);
+        return;
+    }
+    
+    // === 以下为原始关卡背景渲染（第2-4关） ===
+    c.fillStyle='#0a0a0e';c.fillRect(0,0,w,180);
+    
+    // 绘制上下墙壁
+    var t = level.tunnelTop;
+    var b = level.tunnelBot;
+    
+    // 上墙
+    c.fillStyle='#222226';c.fillRect(0,0,w,t);
+    c.fillStyle='#2a2a2e';c.fillRect(0,0,w,t-4);
+    c.fillStyle='#2e2e32';c.fillRect(0,0,w,t-10);
+    // 下墙
+    c.fillStyle='#222226';c.fillRect(0,b,w,180-b);
+    c.fillStyle='#2a2a2e';c.fillRect(0,b+4,w,180-b-4);
+    c.fillStyle='#2e2e32';c.fillRect(0,b+10,w,180-b-10);
+    
+    // 墙壁纹理
+    c.fillStyle='#1a1a1e';
+    for(var i=0;i<w;i+=14){c.fillRect(i,t-2,10,2);c.fillRect(i,b,10,2);}
+    c.fillStyle='#3a3a3e';
+    for(var i=0;i<w;i+=14){c.fillRect(i+1,t-1,8,1);c.fillRect(i+1,b,8,1);}
+    c.fillStyle='#40404a';
+    for(var i=0;i<w;i+=3){c.fillRect(i,t,2,1);c.fillRect(i,b-1,2,1);}
+    
+    // 墙壁装饰
+    c.fillStyle='#28282c';
+    for(var i=0;i<w;i+=28){
+        var h1=Math.floor(Math.random()*6)+2;
+        c.fillRect(i,t-10-h1,2,h1);
+        c.fillRect(i+10,t-8-Math.floor(Math.random()*5),2,Math.floor(Math.random()*5)+2);
+        var h2=Math.floor(Math.random()*6)+2;
+        c.fillRect(i,b+10,2,h2);
+        c.fillRect(i+10,b+8,2,Math.floor(Math.random()*5)+2);
+    }
+    
+    // 壁龛
+    var niches=[80, 160, 240];
+    niches.forEach(function(nx){
+        c.fillStyle='#0a0a0e';c.fillRect(nx,t-35,16,30);c.fillRect(nx+16,t-30,12,22);
+        c.fillStyle='#14141a';c.fillRect(nx+3,t-30,10,22);
+    });
+    
+    // 关卡隔断墙（左右两侧）
+    c.fillStyle='#3a3a42';
+    c.fillRect(0, t, 8, b - t);
+    c.fillRect(312, t, 8, b - t);
+    
+    // 隔断墙装饰
+    c.fillStyle='#4a4a52';
+    c.fillRect(0, t, 8, 3);
+    c.fillRect(0, b - 3, 8, 3);
+    c.fillRect(312, t, 8, 3);
+    c.fillRect(312, b - 3, 8, 3);
+    
+    // 门框效果（入口和出口标记）
+    c.fillStyle='#2a2a2e';
+    c.fillRect(0, t + 8, 4, b - t - 16);
+    c.fillRect(316, t + 8, 4, b - t - 16);
+}
+
+/* ==================== 第一关雪夜背景 ==================== */
+function renderSnowBG(c, w) {
+    // 雪地覆盖整个画面（无天空）
+    // 整个画面都是白茫茫的雪地，带微微的夜间色调
+    var h = 180; // 画布总高度
+    
+    // 雪地底色 - 从上到下略有深浅变化，营造夜间雪原感
+    c.fillStyle='#a8b0c4';
+    c.fillRect(0,0,w,h);
+    
+    // 顶部稍微偏暗（夜间远方雪地）
+    c.fillStyle='#98a0b4';
+    c.fillRect(0,0,w,h*0.25);
+    
+    // 中上部分渐变过渡
+    c.fillStyle='#a0a8bc';
+    c.fillRect(0,h*0.25,w,h*0.15);
+    
+    // 中下部分稍微亮一些（近处雪地反光）
+    c.fillStyle='#b8c0d4';
+    c.fillRect(0,h*0.6,w,h*0.2);
+    
+    // 底部高光
+    c.fillStyle='#c0c8dc';
+    c.fillRect(0,h*0.8,w,h*0.2);
+    
+    // 雪地纹理 - 覆盖整个画面
+    for(var i=0;i<w*8;i++){
+        var tx=Math.floor(Math.random()*w);
+        var ty=Math.floor(Math.random()*h);
+        if(Math.random()>0.4){
+            c.fillStyle=Math.random()>0.5?'#a0a8bc':'#c0c8dc';
+            c.fillRect(tx,ty,1,1);
+        }
+    }
+    
+    // 雪地闪光点 - 覆盖整个画面
+    for(var i=0;i<w;i++){
+        c.fillStyle=Math.random()>0.5?'#dce4ff':'#c8d4f0';
+        c.fillRect(Math.floor(Math.random()*w),Math.floor(Math.random()*h),1,1);
+    }
+    
+    // 雪堆/雪丘 - 散布在整个画面
+    for(var x=0;x<w;x+=25){
+        var dh=Math.floor(Math.random()*6)+2;
+        var dw=Math.floor(Math.random()*20)+10;
+        var dy=Math.floor(Math.random()*(h-20))+5;
+        c.fillStyle='#c8d0e4';
+        c.fillRect(x,dy,dw,dh+1);
+    }
+    
+    // 额外的大雪丘
+    c.fillStyle='#d0d8ec';
+    for(var x=10;x<w;x+=60){
+        var dh=Math.floor(Math.random()*4)+2;
+        var dy=Math.floor(Math.random()*(h-30))+10;
+        c.fillRect(x,dy,Math.floor(Math.random()*15)+10,dh);
+    }
+    
+    // 小雪堆装饰
+    c.fillStyle='#d8e0f0';
+    for(var x=20;x<w;x+=80+Math.floor(Math.random()*60)){
+        var dw=Math.floor(Math.random()*10)+5;
+        var dh=Math.floor(Math.random()*4)+2;
+        var dy=Math.floor(Math.random()*(h-20))+5;
+        c.fillRect(x,dy,dw,dh);
+    }
+    
+    // 地面上的小石头/半埋在雪中的岩石 - 稀疏分布
+    c.fillStyle='#8890a0';
+    for(var x=80;x<w;x+=90+Math.floor(Math.random()*70)){
+        var rw=Math.floor(Math.random()*3)+2;
+        var rh=Math.floor(Math.random()*2)+1;
+        var ry=h*0.5+Math.floor(Math.random()*h*0.4);
+        c.fillRect(x,ry,rw,rh);
+        c.fillStyle='#a0a8b8';
+        c.fillRect(x,ry-1,rw,1);
+        c.fillStyle='#8890a0';
+    }
+    
+    // 微弱的月光照射效果（雪地上的反光带）
+    c.globalAlpha=0.03;
+    c.fillStyle='#e0e8ff';
+    c.fillRect(Math.floor(w*0.3),0,w*0.4,h);
+    c.globalAlpha=1;
+}
+
+/* ==================== 游戏状态 ==================== */
+var state = {
+    running:true,
+    timeStopped:false,
+    stopTimer:0,
+    stopStartTime:0,
+    keys:{},
+    player:null,
+    enemies:[],
+    projectiles:[],
+    pearls:[],
+    covers:[],
+    isMoving:false,
+    effects:[],
+    dyingEnemies:[],
+    globalTick:0,
+    rewindItem:null,
+    currentLevel:1,
+    lastCheckpoint: null, // 最后一个存档点位置
+    transitioning:false,
+    scarecrows:[], // 第一关稻草人
+    scarecrowInitialCount: 0, // 初始稻草人数量
+    scarecrowKilled: 0 // 已击杀稻草人数量
+};
+var scarecrowCoverIndices = []; // 稻草人对应的碰撞体索引
+var hasRewind = false;
+var isRewinding = false;
+var rewindIndex = 0;
+var stateHistory = [];
+var lastFrameTime = 0;
+
+/* ==================== 摄像机系统（横向卷轴） ==================== */
+var camera = { x: 0 };
+function updateCamera() {
+    var level = LEVELS[state.currentLevel - 1];
+    if (level.width > 320) {
+        var targetX = state.player.x + state.player.w / 2 - 160;
+        camera.x = Math.max(0, Math.min(level.width - 320, targetX));
+    } else {
+        camera.x = 0;
+    }
+}
+
+function Entity(x,y,w,h,color){this.x=x;this.y=y;this.w=w;this.h=h;this.color=color;this.vx=0;this.vy=0;}
+
+function Player(x,y){
+    Entity.call(this,x,y,8,12,PAL.white);
+    this.speed=PLAYER_SPEED_NORMAL;this.facingRight=true;this.animTimer=0;this.animFrame=0;
+}
+Player.prototype.update=function(){
+    this.speed=state.timeStopped?PLAYER_SPEED_STOP:PLAYER_SPEED_NORMAL;
+    this.vx=0;this.vy=0;
+    if(state.keys['w'])this.vy=-this.speed;
+    if(state.keys['s'])this.vy=this.speed;
+    if(state.keys['a']){this.vx=-this.speed;this.facingRight=false;}
+    if(state.keys['d']){this.vx=this.speed;this.facingRight=true;}
+    var nx=this.x+this.vx,ny=this.y+this.vy;
+    var blocked=false;
+    state.covers.forEach(function(cv){if(nx<cv.x+cv.w&&nx+this.w>cv.x&&ny<cv.y+cv.h&&ny+this.h>cv.y)blocked=true;}.bind(this));
+    if(!blocked){this.x=nx;this.y=ny;}
+    
+    // 关卡边界限制（考虑隔断墙）
+    var level = LEVELS[state.currentLevel - 1];
+    var maxX = level.width - 18;
+    this.x=Math.max(10, Math.min(maxX - this.w, this.x));
+    this.y=Math.max(level.tunnelTop,Math.min(level.tunnelBot-this.h,this.y));
+    state.isMoving=(this.vx!==0||this.vy!==0);
+    if(state.isMoving){this.animTimer++;if(this.animTimer%6===0)this.animFrame=(this.animFrame+1)%4;}
+    else{this.animFrame=0;this.animTimer=0;}
+};
+Player.prototype.draw=function(){
+    var x=px(this.x),y=px(this.y),f=this.facingRight?1:-1;
+    var bob=(this.animFrame===1||this.animFrame===3)?-1:0;
+    var leg=(this.animFrame===1||this.animFrame===3);
+    ctx.fillStyle='rgba(0,0,0,0.25)';ctx.fillRect(x-1,y+11,10,2);
+    ctx.fillStyle=PAL.straw;ctx.fillRect(x-2,y-2+bob,12,2);
+    ctx.fillStyle=PAL.darkStraw;ctx.fillRect(x,y-4+bob,8,2);
+    ctx.fillStyle='#4a3828';ctx.fillRect(x+2,y-3+bob,4,1);
+    ctx.fillStyle=PAL.skin;ctx.fillRect(x+1,y+bob,6,3);
+    ctx.fillStyle='#1a1a1a';ctx.fillRect(f>0?x+5:x+2,y+1+bob,1,1);
+    ctx.fillStyle=PAL.white;ctx.fillRect(x,y+3+bob,8,3);
+    ctx.fillStyle='#c8c0b0';ctx.fillRect(x+3,y+3+bob,2,3);
+    ctx.fillStyle=PAL.darkGold;ctx.fillRect(x,y+6+bob,8,1);
+    ctx.fillStyle=PAL.gold;ctx.fillRect(x+3,y+5+bob,2,1);
+    ctx.fillStyle='#d0c8b8';ctx.fillRect(x+1,y+7+bob,6,3);
+    ctx.fillStyle='#a09888';ctx.fillRect(x+1,y+9+bob,1,1);ctx.fillRect(x+6,y+9+bob,1,1);
+    ctx.fillStyle='#2a2420';
+    if(leg){ctx.fillRect(x+1,y+10,2,2);ctx.fillRect(x+5,y+10,2,2);}
+    else{ctx.fillRect(x+2,y+10,2,2);ctx.fillRect(x+4,y+10,2,2);}
+    var sx=f>0?x+8:x-2;
+    ctx.fillStyle='#b0b8c0';ctx.fillRect(sx,y-3+bob,1,11);
+    ctx.fillStyle=PAL.darkGold;ctx.fillRect(sx-1,y+5+bob,3,1);
+    ctx.fillStyle='#e0e8f0';ctx.fillRect(sx,y-3+bob,1,2);
+    if(state.timeStopped&&state.isMoving){
+        ctx.globalAlpha=0.2;ctx.fillStyle=PAL.pearl;ctx.fillRect(x+1,y+bob,6,10);
+        ctx.globalAlpha=0.08;ctx.fillStyle=PAL.pearl;ctx.fillRect(x+(f>0?-3:5),y+bob,6,10);
+        ctx.globalAlpha=1;
+    }
+};
+
+function Enemy(x,y){
+    Entity.call(this,x,y,8,12,PAL.cinnabar);
+    this.shootCooldown=Math.random()*200+180;
+    this.variant=Math.floor(Math.random()*3);
+    this.alertTimer=0;this.marked=false;this.pushFlash=0;
+    this.moveSpeed=0.3;this.moveTimer=Math.random()*80+40;
+    var angle=Math.random()*Math.PI*2;
+    this.dirX=Math.cos(angle);this.dirY=Math.sin(angle);
+}
+Enemy.prototype.update=function(){
+    if(state.timeStopped){
+        if(this.marked)return;
+        if(!state.isMoving)return;
+        this.doPatrol();this.doPushBack();this.doShooting();return;
+    }
+    this.doPatrol();this.doShooting();
+};
+Enemy.prototype.doPatrol=function(){
+    this.moveTimer--;
+    if(this.moveTimer<=0){var a=Math.random()*Math.PI*2;this.dirX=Math.cos(a);this.dirY=Math.sin(a);this.moveTimer=Math.random()*100+50;}
+    var nx=this.x+this.dirX*this.moveSpeed,ny=this.y+this.dirY*this.moveSpeed;
+    var blocked=false;
+    state.covers.forEach(function(cv){if(nx<cv.x+cv.w&&nx+this.w>cv.x&&ny<cv.y+cv.h&&ny+this.h>cv.y)blocked=true;}.bind(this));
+    if(!blocked){this.x=nx;this.y=ny;}
+    else{this.dirX=-this.dirX+(Math.random()-0.5)*0.5;this.dirY=-this.dirY+(Math.random()-0.5)*0.5;var len=Math.hypot(this.dirX,this.dirY)||1;this.dirX/=len;this.dirY/=len;this.moveTimer=Math.random()*40+20;}
+    this.clampBounds();
+};
+Enemy.prototype.doPushBack=function(){
+    var dx=this.x+4-(state.player.x+4),dy=this.y+6-(state.player.y+6);
+    var dist=Math.hypot(dx,dy)||1;
+    if(dist<PUSH_RANGE){var force=PUSH_FORCE*(1-dist/PUSH_RANGE);this.x+=(dx/dist)*force;this.y+=(dy/dist)*force;this.clampBounds();this.pushFlash=4;if(state.globalTick%3===0)state.effects.push({x:this.x+Math.random()*8,y:this.y+Math.random()*12,life:10,maxLife:10,type:'push-spark'});}
+};
+Enemy.prototype.doShooting=function(){
+    this.shootCooldown--;
+    if(this.shootCooldown<=0){
+        var dx = state.player.x - this.x;
+        var dy = state.player.y - this.y;
+        var dist = Math.hypot(dx, dy);
+        
+        if(dist <= ATTACK_RANGE){
+            this.shootKnife();
+        }
+        this.shootCooldown=Math.random()*200+180;
+    }
+    this.alertTimer=this.shootCooldown<25?(this.alertTimer+1)%12:0;
+};
+Enemy.prototype.clampBounds=function(){
+    var level = LEVELS[state.currentLevel - 1];
+    var maxX = level.width - 18;
+    this.x=Math.max(10,Math.min(maxX-this.w,this.x));
+    this.y=Math.max(level.tunnelTop,Math.min(level.tunnelBot-this.h,this.y));
+};
+Enemy.prototype.shootKnife=function(){
+    var dx=state.player.x-this.x,dy=state.player.y-this.y;
+    var angle=Math.atan2(dy,dx);
+    state.projectiles.push(new Knife(this.x+4,this.y+4,Math.cos(angle),Math.sin(angle)));
+};
+Enemy.prototype.draw=function(){
+    var x=px(this.x),y=px(this.y),v=this.variant;
+    var hatC,hatD,robeC,robeD,trimC,legC;
+    if(v===0){hatC=PAL.darkCinn;hatD='#4a0e0e';robeC=PAL.cinnabar;robeD=PAL.darkCinn;trimC='#701a1a';legC='#2a1414';}
+    else if(v===1){hatC=PAL.ninjaDark;hatD='#18181e';robeC=PAL.ninja;robeD=PAL.ninjaDark;trimC=PAL.ninjaTrim;legC='#1a1a20';}
+    else{hatC='#3a2020';hatD='#2a1414';robeC='#703030';robeD='#502020';trimC='#904040';legC='#201414';}
+    ctx.fillStyle='rgba(0,0,0,0.2)';ctx.fillRect(x-1,y+11,10,2);
+    if(this.pushFlash>0){this.pushFlash--;ctx.fillStyle='rgba(200,220,255,0.15)';ctx.fillRect(x-1,y-3,10,16);}
+    ctx.fillStyle=hatC;ctx.fillRect(x-1,y-1,10,2);
+    ctx.fillStyle=hatD;ctx.fillRect(x+1,y-3,6,2);
+    if(v!==1){ctx.fillStyle=trimC;ctx.fillRect(x+6,y-2,3,1);ctx.fillRect(x+7,y-1,4,1);}
+    ctx.fillStyle=PAL.darkSkin;ctx.fillRect(x+1,y+1,6,2);
+    ctx.fillStyle=v===1?'#ff6666':'#cc3333';ctx.fillRect(x+2,y+1,1,1);ctx.fillRect(x+5,y+1,1,1);
+    ctx.fillStyle=robeC;ctx.fillRect(x,y+3,8,4);
+    ctx.fillStyle=robeD;ctx.fillRect(x+3,y+3,2,4);
+    ctx.fillStyle=trimC;ctx.fillRect(x,y+6,8,1);
+    ctx.fillStyle=robeD;ctx.fillRect(x+1,y+7,6,3);
+    ctx.fillStyle=legC;ctx.fillRect(x+2,y+10,2,2);ctx.fillRect(x+4,y+10,2,2);
+    ctx.fillStyle='#c0c0c0';ctx.fillRect(x+8,y+4,3,1);
+    ctx.fillStyle='#e0e0e0';ctx.fillRect(x+10,y+4,1,1);
+    ctx.fillStyle=PAL.darkGold;ctx.fillRect(x+8,y+3,1,1);ctx.fillRect(x+8,y+5,1,1);
+    if(this.alertTimer>0&&this.alertTimer<8&&!this.marked){
+        var level = LEVELS[state.currentLevel - 1];
+        var alertY=y-6;if(alertY<level.tunnelTop)alertY=level.tunnelTop;
+        ctx.fillStyle=PAL.gold;ctx.fillRect(x+3,alertY,2,1);ctx.fillRect(x+2,alertY+1,4,1);ctx.fillRect(x+2,alertY+2,1,1);ctx.fillRect(x+5,alertY+2,1,1);
+    }
+    if(state.timeStopped&&!state.isMoving&&!this.marked){ctx.fillStyle='rgba(0,180,180,0.08)';ctx.fillRect(x-1,y-3,10,16);}
+    if(state.timeStopped&&!state.isMoving&&!this.marked)this.drawPrediction();
+    if(this.marked)this.drawBigRedX(x,y);
+};
+
+Enemy.prototype.drawPrediction=function(){
+    var self=this;
+    var simX=this.x,simY=this.y;
+    var level = LEVELS[state.currentLevel - 1];
+    for(var s=0;s<40;s++){
+        var nx2=simX+this.dirX*this.moveSpeed;
+        var ny2=simY+this.dirY*this.moveSpeed;
+        if(ny2<level.tunnelTop||ny2+self.h>level.tunnelBot)break;
+        var hit=false;
+        state.covers.forEach(function(cv){if(nx2<cv.x+cv.w&&nx2+self.w>cv.x&&ny2<cv.y+cv.h&&ny2+self.h>cv.y)hit=true;});
+        if(hit)break;
+        simX=nx2;simY=ny2;
+    }
+    simX=Math.max(10,Math.min(level.width-18-self.w,simX));
+    simY=Math.max(level.tunnelTop,Math.min(level.tunnelBot-self.h,simY));
+    var predX=simX,predY=simY;
+    var dx=predX-this.x,dy=predY-this.y;
+    var dist=Math.hypot(dx,dy);
+    if(dist>3){
+        for(var s=3;s<dist;s+=3){
+            var t=s/dist;
+            var lx=px(this.x+4+dx*t);
+            var ly=px(this.y+6+dy*t);
+            var la=0.32*(1-t*0.65);
+            if(Math.floor(s/3)%2===0){
+                ctx.fillStyle='rgba(0,210,210,'+la+')';ctx.fillRect(lx,ly,1,1);
+                ctx.fillStyle='rgba(0,210,210,'+(la*0.3)+')';ctx.fillRect(lx-1,ly,1,1);ctx.fillRect(lx+1,ly,1,1);
+            }else{
+                ctx.fillStyle='rgba(0,180,180,'+(la*0.5)+')';ctx.fillRect(lx,ly,1,1);
+            }
+        }
+    }
+    var pulse=0.18+Math.sin(state.globalTick*0.1)*0.07;
+    ctx.globalAlpha=pulse;
+    drawSimpleEnemy(predX,predY,this.variant,false);
+    ctx.globalAlpha=1;
+};
+
+Enemy.prototype.drawBigRedX=function(x,y){
+    var cx=x+4,cy=y+6,pulse=Math.sin(state.globalTick*0.12)*0.25+0.75;
+    ctx.globalAlpha=pulse;
+    ctx.fillStyle='rgba(255,20,20,0.1)';ctx.fillRect(x-4,y-5,16,18);
+    ctx.fillStyle='#ff1111';
+    for(var d=-8;d<=8;d++){ctx.fillRect(cx+d,cy+d,2,1);ctx.fillRect(cx+d,cy-d,2,1);}
+    ctx.fillStyle='#ff6644';ctx.fillRect(cx-1,cy-1,3,3);
+    ctx.globalAlpha=1;
+};
+
+function ShieldGuard(x, y, name, armorColor, isTall) {
+    Entity.call(this, x, y, isTall ? 10 : 8, isTall ? 16 : 12, armorColor);
+    this.name = name;
+    this.armorColor = armorColor;
+    this.isTall = isTall;
+    this.shieldHP = 2;
+    this.shieldBroken = false;
+    this.marked = false;
+    this.pushFlash = 0;
+    this.hitFlash = 0;
+    this.moveSpeed = 0.2;
+    this.moveTimer = Math.random() * 80 + 40;
+    var angle = Math.random() * Math.PI * 2;
+    this.dirX = Math.cos(angle);
+    this.dirY = Math.sin(angle);
+}
+ShieldGuard.prototype = Object.create(Enemy.prototype);
+ShieldGuard.prototype.constructor = ShieldGuard;
+
+ShieldGuard.prototype.clampBounds = function() {
+    var level = LEVELS[state.currentLevel - 1];
+    var maxX = level.width - 18;
+    this.x = Math.max(10, Math.min(maxX - this.w, this.x));
+    this.y = Math.max(level.tunnelTop, Math.min(level.tunnelBot - this.h, this.y));
+};
+
+ShieldGuard.prototype.draw = function() {
+    var x = px(this.x);
+    var y = px(this.y);
+    var w = this.w;
+    var h = this.h;
+    
+    var armorMain, armorDark, armorLight, trimColor;
+    if (this.armorColor === 'black') {
+        armorMain = '#1a1a22';
+        armorDark = '#0a0a12';
+        armorLight = '#2a2a32';
+        trimColor = '#4a4a52';
+    } else {
+        armorMain = '#e8e8e0';
+        armorDark = '#c8c8c0';
+        armorLight = '#f8f8f0';
+        trimColor = '#a8a8a0';
+    }
+    
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(x - 1, y + h - 1, w + 2, 2);
+    
+    if (this.pushFlash > 0) {
+        this.pushFlash--;
+        ctx.fillStyle = 'rgba(200,220,255,0.15)';
+        ctx.fillRect(x - 1, y - 4, w + 2, h + 4);
+    }
+    if (this.hitFlash > 0) {
+        this.hitFlash--;
+        ctx.fillStyle = 'rgba(255,255,200,0.3)';
+        ctx.fillRect(x - 2, y - 5, w + 4, h + 5);
+    }
+    
+    ctx.fillStyle = armorMain;
+    ctx.fillRect(x + 1, y - 3, w - 2, 4);
+    ctx.fillStyle = armorDark;
+    ctx.fillRect(x + 2, y - 5, w - 4, 3);
+    ctx.fillStyle = armorLight;
+    ctx.fillRect(x + 3, y - 4, w - 6, 1);
+    
+    ctx.fillStyle = trimColor;
+    ctx.fillRect(x + w / 2 - 1, y - 5, 2, 3);
+    ctx.fillRect(x + w / 2 - 2, y - 3, 1, 2);
+    ctx.fillRect(x + w / 2 + 1, y - 3, 1, 2);
+    
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(x + 2, y + 1, w - 4, 2);
+    ctx.fillStyle = this.armorColor === 'black' ? '#ff4444' : '#cc2222';
+    ctx.fillRect(x + 3, y + 1, 1, 1);
+    ctx.fillRect(x + w - 4, y + 1, 1, 1);
+    
+    ctx.fillStyle = armorMain;
+    ctx.fillRect(x, y + 3, w, h - 7);
+    ctx.fillStyle = armorDark;
+    ctx.fillRect(x + 1, y + 4, w - 2, 2);
+    ctx.fillStyle = armorLight;
+    ctx.fillRect(x + 1, y + h - 6, w - 2, 1);
+    
+    ctx.fillStyle = trimColor;
+    ctx.fillRect(x + w / 2 - 1, y + 3, 2, h - 8);
+    ctx.fillRect(x, y + h / 2, w, 1);
+    
+    ctx.fillStyle = armorDark;
+    if (this.isTall) {
+        ctx.fillRect(x + 2, y + h - 4, 2, 4);
+        ctx.fillRect(x + w - 4, y + h - 4, 2, 4);
+    } else {
+        ctx.fillRect(x + 2, y + h - 2, 2, 2);
+        ctx.fillRect(x + w - 4, y + h - 2, 2, 2);
+    }
+    
+    if (!this.shieldBroken) {
+        var shieldX = x - 4;
+        var shieldY = y;
+        var shieldW = 5;
+        var shieldH = this.isTall ? 12 : 9;
+        
+        ctx.fillStyle = this.armorColor === 'black' ? '#3a3a42' : '#d0d0c8';
+        ctx.fillRect(shieldX, shieldY, shieldW, shieldH);
+        
+        ctx.fillStyle = this.armorColor === 'black' ? '#5a5a62' : '#a0a098';
+        ctx.fillRect(shieldX, shieldY, 1, shieldH);
+        ctx.fillRect(shieldX + shieldW - 1, shieldY, 1, shieldH);
+        ctx.fillRect(shieldX, shieldY, shieldW, 1);
+        ctx.fillRect(shieldX, shieldY + shieldH - 1, shieldW, 1);
+        
+        if (this.shieldHP === 1) {
+            ctx.fillStyle = '#ff6666';
+            ctx.fillRect(shieldX + 1, shieldY + shieldH / 2, 3, 1);
+            ctx.fillRect(shieldX + 2, shieldY + shieldH / 2 - 1, 1, 3);
+        }
+    }
+    
+    ctx.fillStyle = this.armorColor === 'black' ? '#aaccff' : '#ffcc88';
+    ctx.font = '7px zpix, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.name, x + w / 2, y - 7);
+    ctx.textAlign = 'left';
+    
+    if (this.marked) {
+        var cx = x + w / 2;
+        var cy = y + h / 2;
+        var pulse = Math.sin(state.globalTick * 0.12) * 0.25 + 0.75;
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#ff1111';
+        for (var d = -6; d <= 6; d++) {
+            ctx.fillRect(cx + d, cy + d, 2, 1);
+            ctx.fillRect(cx + d, cy - d, 2, 1);
+        }
+        ctx.globalAlpha = 1;
+    }
+};
+
+/* ==================== 盾卫·哧吭（防御型） ==================== */
+// 始终盾牌面向玩家，不发射飞刀，只能从背面击杀
+function ShieldDefender(x, y, name, armorColor, isTall) {
+    Entity.call(this, x, y, isTall ? 10 : 8, isTall ? 16 : 12, armorColor);
+    this.name = name;
+    this.armorColor = armorColor;
+    this.isTall = isTall;
+    this.marked = false;
+    this.pushFlash = 0;
+    this.hitFlash = 0;
+    // 盾牌始终朝向左边（-1=盾在右边，面向左，挡住左侧攻击）
+    this.shieldDir = -1;
+    this.moveSpeed = 0.15;
+    // 寻找搭档的引用
+    this.partner = null;
+}
+ShieldDefender.prototype = Object.create(Enemy.prototype);
+ShieldDefender.prototype.constructor = ShieldDefender;
+
+ShieldDefender.prototype.update = function() {
+    // 击杀第一个稻草人之前不行动
+    if (state.scarecrowKilled < 1) return;
+    if (state.timeStopped) {
+        if (this.marked) return;
+        // 时间静止时不做任何事（不发射飞刀）
+        return;
+    }
+    
+    // 盾牌始终朝向左边
+    this.shieldDir = -1;
+    
+    // 主动靠近玩家
+    var playerCenterX = state.player.x + state.player.w / 2;
+    var playerCenterY = state.player.y + state.player.h / 2;
+    var myCenterX = this.x + this.w / 2;
+    var myCenterY = this.y + this.h / 2;
+    
+    var dx = playerCenterX - myCenterX;
+    var dy = playerCenterY - myCenterY;
+    var dist = Math.hypot(dx, dy);
+    
+    // 与玩家保持一定距离
+    var approachSpeed = 0.3;
+    if (dist > 40) {
+        var moveX = (dx / dist) * approachSpeed;
+        var moveY = (dy / dist) * approachSpeed * 0.6; // 垂直移动稍慢
+        
+        var nx = this.x + moveX;
+        var ny = this.y + moveY;
+        
+        var blocked = false;
+        state.covers.forEach(function(cv) {
+            if (nx < cv.x + cv.w && nx + this.w > cv.x && ny < cv.y + cv.h && ny + this.h > cv.y) blocked = true;
+        }.bind(this));
+        
+        if (!blocked) { this.x = nx; this.y = ny; }
+    } else if (dist < 30) {
+        // 太近了，稍微后退
+        var retreatX = (-dx / dist) * approachSpeed * 0.5;
+        var nx = this.x + retreatX;
+        var blocked = false;
+        state.covers.forEach(function(cv) {
+            if (nx < cv.x + cv.w && nx + this.w > cv.x && ny < cv.y + cv.h && ny + this.h > cv.y) blocked = true;
+        }.bind(this));
+        if (!blocked) { this.x = nx; }
+    }
+    
+    this.clampBounds();
+};
+
+ShieldDefender.prototype.clampBounds = function() {
+    var level = LEVELS[state.currentLevel - 1];
+    var maxX = level.width - 18;
+    this.x = Math.max(10, Math.min(maxX - this.w, this.x));
+    this.y = Math.max(level.tunnelTop, Math.min(level.tunnelBot - this.h, this.y));
+};
+
+ShieldDefender.prototype.draw = function() {
+    var x = px(this.x);
+    var y = px(this.y);
+    var w = this.w;
+    var h = this.h;
+    
+    var armorMain, armorDark, armorLight, trimColor;
+    if (this.armorColor === 'black') {
+        armorMain = '#1a1a22';
+        armorDark = '#0a0a12';
+        armorLight = '#2a2a32';
+        trimColor = '#4a4a52';
+    } else {
+        armorMain = '#e8e8e0';
+        armorDark = '#c8c8c0';
+        armorLight = '#f8f8f0';
+        trimColor = '#a8a8a0';
+    }
+    
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(x - 1, y + h - 1, w + 2, 2);
+    
+    if (this.hitFlash > 0) {
+        this.hitFlash--;
+        ctx.fillStyle = 'rgba(255,255,200,0.3)';
+        ctx.fillRect(x - 2, y - 5, w + 4, h + 5);
+    }
+    
+    // 头盔
+    ctx.fillStyle = armorMain;
+    ctx.fillRect(x + 1, y - 3, w - 2, 4);
+    ctx.fillStyle = armorDark;
+    ctx.fillRect(x + 2, y - 5, w - 4, 3);
+    ctx.fillStyle = armorLight;
+    ctx.fillRect(x + 3, y - 4, w - 6, 1);
+    ctx.fillStyle = trimColor;
+    ctx.fillRect(x + w / 2 - 1, y - 5, 2, 3);
+    
+    // 面部
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(x + 2, y + 1, w - 4, 2);
+    ctx.fillStyle = '#cc2222';
+    ctx.fillRect(x + 3, y + 1, 1, 1);
+    ctx.fillRect(x + w - 4, y + 1, 1, 1);
+    
+    // 铠甲身体
+    ctx.fillStyle = armorMain;
+    ctx.fillRect(x, y + 3, w, h - 7);
+    ctx.fillStyle = armorDark;
+    ctx.fillRect(x + 1, y + 4, w - 2, 2);
+    ctx.fillStyle = armorLight;
+    ctx.fillRect(x + 1, y + h - 6, w - 2, 1);
+    ctx.fillStyle = trimColor;
+    ctx.fillRect(x + w / 2 - 1, y + 3, 2, h - 8);
+    ctx.fillRect(x, y + h / 2, w, 1);
+    
+    // 腿
+    ctx.fillStyle = armorDark;
+    if (this.isTall) {
+        ctx.fillRect(x + 2, y + h - 4, 2, 4);
+        ctx.fillRect(x + w - 4, y + h - 4, 2, 4);
+    } else {
+        ctx.fillRect(x + 2, y + h - 2, 2, 2);
+        ctx.fillRect(x + w - 4, y + h - 2, 2, 2);
+    }
+    
+    // 盾牌 - 根据shieldDir决定方向
+    var shieldW = 5;
+    var shieldH = this.isTall ? 12 : 9;
+    var shieldX, shieldY = y;
+    if (this.shieldDir === 1) {
+        // 盾在左边（面向右）
+        shieldX = x - 4;
+    } else {
+        // 盾在右边（面向左）
+        shieldX = x + w - 1;
+    }
+    
+    // 盾牌主体
+    ctx.fillStyle = this.armorColor === 'black' ? '#3a3a42' : '#d0d0c8';
+    ctx.fillRect(shieldX, shieldY, shieldW, shieldH);
+    // 盾牌边框
+    ctx.fillStyle = this.armorColor === 'black' ? '#5a5a62' : '#a0a098';
+    ctx.fillRect(shieldX, shieldY, 1, shieldH);
+    ctx.fillRect(shieldX + shieldW - 1, shieldY, 1, shieldH);
+    ctx.fillRect(shieldX, shieldY, shieldW, 1);
+    ctx.fillRect(shieldX, shieldY + shieldH - 1, shieldW, 1);
+    // 盾牌中心装饰
+    ctx.fillStyle = this.armorColor === 'black' ? '#2a2a32' : '#b8b8b0';
+    ctx.fillRect(shieldX + 2, shieldY + Math.floor(shieldH/2) - 1, 1, 3);
+    ctx.fillRect(shieldX + 1, shieldY + Math.floor(shieldH/2), 3, 1);
+    
+    // 名字
+    ctx.fillStyle = this.armorColor === 'black' ? '#aaccff' : '#ffcc88';
+    ctx.font = '7px zpix, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.name, x + w / 2, y - 7);
+    ctx.textAlign = 'left';
+    
+    if (this.marked) {
+        var cx = x + w / 2;
+        var cy = y + h / 2;
+        var pulse = Math.sin(state.globalTick * 0.12) * 0.25 + 0.75;
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#ff1111';
+        for (var d = -6; d <= 6; d++) {
+            ctx.fillRect(cx + d, cy + d, 2, 1);
+            ctx.fillRect(cx + d, cy - d, 2, 1);
+        }
+        ctx.globalAlpha = 1;
+    }
+};
+
+// 判断玩家是否在哧吭的背面
+ShieldDefender.prototype.isPlayerBehind = function() {
+    var playerCenterX = state.player.x + state.player.w / 2;
+    var myCenterX = this.x + this.w / 2;
+    // 盾牌面向的方向的反方向即为背面
+    if (this.shieldDir === 1) {
+        // 盾在左，面向右，背面是左边
+        return playerCenterX < myCenterX - 4;
+    } else {
+        // 盾在右，面向左，背面是右边
+        return playerCenterX > myCenterX + 4;
+    }
+};
+
+/* ==================== 盾兵·吭哧（攻击型搭档） ==================== */
+// 发射飞刀，始终紧跟在哧吭后面
+function ShieldPartner(x, y, name, armorColor, isTall) {
+    Entity.call(this, x, y, isTall ? 10 : 8, isTall ? 16 : 12, armorColor);
+    this.name = name;
+    this.armorColor = armorColor;
+    this.isTall = isTall;
+    this.marked = false;
+    this.pushFlash = 0;
+    this.hitFlash = 0;
+    this.shootCooldown = Math.random() * 150 + 100;
+    this.alertTimer = 0;
+    this.moveSpeed = 0.3;
+    this.moveTimer = Math.random() * 80 + 40;
+    var angle = Math.random() * Math.PI * 2;
+    this.dirX = Math.cos(angle);
+    this.dirY = Math.sin(angle);
+    // 搭档引用（防御者）
+    this.defender = null;
+    // 跟随偏移
+    this.followOffsetX = -20;
+    this.followOffsetY = 0;
+}
+ShieldPartner.prototype = Object.create(Enemy.prototype);
+ShieldPartner.prototype.constructor = ShieldPartner;
+
+ShieldPartner.prototype.chasePlayer = function() {
+    var playerCenterX = state.player.x + state.player.w / 2;
+    var playerCenterY = state.player.y + state.player.h / 2;
+    var myCenterX = this.x + this.w / 2;
+    var myCenterY = this.y + this.h / 2;
+    
+    var dx = playerCenterX - myCenterX;
+    var dy = playerCenterY - myCenterY;
+    var dist = Math.hypot(dx, dy);
+    
+    if (dist > 25) {
+        var speed = 0.35;
+        var nx = this.x + (dx / dist) * speed;
+        var ny = this.y + (dy / dist) * speed * 0.6;
+        var blocked = false;
+        state.covers.forEach(function(cv) {
+            if (nx < cv.x + cv.w && nx + this.w > cv.x && ny < cv.y + cv.h && ny + this.h > cv.y) blocked = true;
+        }.bind(this));
+        if (!blocked) { this.x = nx; this.y = ny; }
+    }
+    this.clampBounds();
+};
+
+ShieldPartner.prototype.update = function() {
+    // 击杀第一个稻草人之前不行动
+    if (state.scarecrowKilled < 1) return;
+    if (state.timeStopped) {
+        if (this.marked) return;
+        if (!state.isMoving) return;
+        this.doShooting();
+        return;
+    }
+    
+    // 如果有搭档，始终跟随在搭档后方（右侧，因为盾牌朝左）
+    if (this.defender && state.enemies.indexOf(this.defender) !== -1) {
+        var def = this.defender;
+        // 始终跟在搭档右侧（盾牌背面）
+        var followDist = 16;
+        var targetX = def.x + def.w + followDist;
+        var targetY = def.y + (def.h - this.h) / 2;
+        
+        var dx = targetX - this.x;
+        var dy = targetY - this.y;
+        var dist = Math.hypot(dx, dy);
+        
+        if (dist > 2) {
+            var speed = Math.min(0.6, dist * 0.12);
+            var nx = this.x + (dx / dist) * speed;
+            var ny = this.y + (dy / dist) * speed;
+            var blocked = false;
+            state.covers.forEach(function(cv) {
+                if (nx < cv.x + cv.w && nx + this.w > cv.x && ny < cv.y + cv.h && ny + this.h > cv.y) blocked = true;
+            }.bind(this));
+            if (!blocked) { this.x = nx; this.y = ny; }
+        }
+        this.clampBounds();
+    } else {
+        // 搭档已死，主动追击玩家
+        this.chasePlayer();
+    }
+    
+    this.doShooting();
+};
+
+ShieldPartner.prototype.clampBounds = function() {
+    var level = LEVELS[state.currentLevel - 1];
+    var maxX = level.width - 18;
+    this.x = Math.max(10, Math.min(maxX - this.w, this.x));
+    this.y = Math.max(level.tunnelTop, Math.min(level.tunnelBot - this.h, this.y));
+};
+
+ShieldPartner.prototype.draw = function() {
+    var x = px(this.x);
+    var y = px(this.y);
+    var w = this.w;
+    var h = this.h;
+    
+    var armorMain, armorDark, armorLight, trimColor;
+    if (this.armorColor === 'black') {
+        armorMain = '#1a1a22';
+        armorDark = '#0a0a12';
+        armorLight = '#2a2a32';
+        trimColor = '#4a4a52';
+    } else {
+        armorMain = '#e8e8e0';
+        armorDark = '#c8c8c0';
+        armorLight = '#f8f8f0';
+        trimColor = '#a8a8a0';
+    }
+    
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(x - 1, y + h - 1, w + 2, 2);
+    
+    if (this.pushFlash > 0) {
+        this.pushFlash--;
+        ctx.fillStyle = 'rgba(200,220,255,0.15)';
+        ctx.fillRect(x - 1, y - 4, w + 2, h + 4);
+    }
+    
+    // 头盔
+    ctx.fillStyle = armorMain;
+    ctx.fillRect(x + 1, y - 3, w - 2, 4);
+    ctx.fillStyle = armorDark;
+    ctx.fillRect(x + 2, y - 5, w - 4, 3);
+    ctx.fillStyle = armorLight;
+    ctx.fillRect(x + 3, y - 4, w - 6, 1);
+    ctx.fillStyle = trimColor;
+    ctx.fillRect(x + w / 2 - 1, y - 5, 2, 3);
+    ctx.fillRect(x + w / 2 - 2, y - 3, 1, 2);
+    ctx.fillRect(x + w / 2 + 1, y - 3, 1, 2);
+    
+    // 面部
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(x + 2, y + 1, w - 4, 2);
+    ctx.fillStyle = '#ff4444';
+    ctx.fillRect(x + 3, y + 1, 1, 1);
+    ctx.fillRect(x + w - 4, y + 1, 1, 1);
+    
+    // 铠甲身体
+    ctx.fillStyle = armorMain;
+    ctx.fillRect(x, y + 3, w, h - 7);
+    ctx.fillStyle = armorDark;
+    ctx.fillRect(x + 1, y + 4, w - 2, 2);
+    ctx.fillStyle = armorLight;
+    ctx.fillRect(x + 1, y + h - 6, w - 2, 1);
+    ctx.fillStyle = trimColor;
+    ctx.fillRect(x + w / 2 - 1, y + 3, 2, h - 8);
+    ctx.fillRect(x, y + h / 2, w, 1);
+    
+    // 腿
+    ctx.fillStyle = armorDark;
+    if (this.isTall) {
+        ctx.fillRect(x + 2, y + h - 4, 2, 4);
+        ctx.fillRect(x + w - 4, y + h - 4, 2, 4);
+    } else {
+        ctx.fillRect(x + 2, y + h - 2, 2, 2);
+        ctx.fillRect(x + w - 4, y + h - 2, 2, 2);
+    }
+    
+    // 没有盾牌 - 用飞刀标记代替
+    // 手中的飞刀
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillRect(x + w, y + 4, 3, 1);
+    ctx.fillStyle = '#e0e0e0';
+    ctx.fillRect(x + w + 2, y + 4, 1, 1);
+    
+    // 警觉标记
+    if (this.alertTimer > 0 && this.alertTimer < 8 && !this.marked) {
+        var level = LEVELS[state.currentLevel - 1];
+        var alertY = y - 6; if (alertY < level.tunnelTop) alertY = level.tunnelTop;
+        ctx.fillStyle = PAL.gold;
+        ctx.fillRect(x + 3, alertY, 2, 1);
+        ctx.fillRect(x + 2, alertY + 1, 4, 1);
+        ctx.fillRect(x + 2, alertY + 2, 1, 1);
+        ctx.fillRect(x + 5, alertY + 2, 1, 1);
+    }
+    
+    // 名字
+    ctx.fillStyle = this.armorColor === 'black' ? '#aaccff' : '#ffcc88';
+    ctx.font = '7px zpix, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.name, x + w / 2, y - 7);
+    ctx.textAlign = 'left';
+    
+    if (this.marked) {
+        var cx = x + w / 2;
+        var cy = y + h / 2;
+        var pulse = Math.sin(state.globalTick * 0.12) * 0.25 + 0.75;
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#ff1111';
+        for (var d = -6; d <= 6; d++) {
+            ctx.fillRect(cx + d, cy + d, 2, 1);
+            ctx.fillRect(cx + d, cy - d, 2, 1);
+        }
+        ctx.globalAlpha = 1;
+    }
+};
+
+function Knife(x,y,dirX,dirY){
+    this.x=x;this.y=y;this.dirX=dirX;this.dirY=dirY;this.speed=KNIFE_INIT_SPD;this.trail=[];this.alive=true;this.age=0;
+}
+Knife.prototype.update=function(){
+    if(state.timeStopped&&!state.isMoving)return;
+    this.speed=Math.min(this.speed+KNIFE_ACCEL,KNIFE_MAX_SPD);
+    this.x+=this.dirX*this.speed;this.y+=this.dirY*this.speed;this.age++;
+    this.trail.push({x:this.x,y:this.y,speed:this.speed});
+    if(this.trail.length>6)this.trail.shift();
+    var level = LEVELS[state.currentLevel - 1];
+    if(this.y<level.tunnelTop||this.y>level.tunnelBot){
+        this.alive=false;return;
+    }
+    if(this.x<-10||this.x>level.width+10)this.alive=false;
+};
+Knife.prototype.draw=function(){
+    this.trail.forEach(function(t,i){var ratio=(i+1)/this.trail.length;var sr=Math.min(t.speed/KNIFE_MAX_SPD,1);ctx.fillStyle='rgba(192,192,192,'+(ratio*sr*0.4)+')';ctx.fillRect(px(t.x),px(t.y),1,1);}.bind(this));
+    var x=px(this.x),y=px(this.y),sr=Math.min(this.speed/KNIFE_MAX_SPD,1);
+    var spin=this.age*0.35,cos=Math.cos(spin),sin=Math.sin(spin);
+    var dx1=px(cos),dy1=px(sin),dx2=px(-cos),dy2=px(-sin);
+    ctx.fillStyle='#d0d0d0';ctx.fillRect(x,y,1,1);ctx.fillRect(x+dx1,y+dy1,1,1);ctx.fillRect(x+dx2,y+dy2,1,1);
+    ctx.fillStyle='#f0f0f0';ctx.fillRect(x+dx1*2,y+dy1*2,1,1);
+};
+
+function DyingEnemy(x,y,variant){
+    this.x=x;this.y=y;this.variant=variant;this.w=8;this.h=12;
+    this.vx=(Math.random()>0.5?1:-1)*(2.5+Math.random()*2);this.vy=-2.5-Math.random()*2;
+    this.life=35;this.maxLife=35;this.spinPhase=0;
+}
+DyingEnemy.prototype.update=function(){
+    this.x+=this.vx;this.y+=this.vy;this.vy+=0.12;this.spinPhase+=0.3;this.life--;
+};
+DyingEnemy.prototype.draw=function(){
+    var alpha=Math.max(0,this.life/this.maxLife);var x=px(this.x),y=px(this.y),wobble=Math.sin(this.spinPhase)*2;
+    ctx.globalAlpha=alpha;var col=this.variant===1?PAL.ninja:PAL.cinnabar;var colD=this.variant===1?PAL.ninjaDark:PAL.darkCinn;
+    ctx.fillStyle=col;ctx.fillRect(x+wobble,y,this.w,this.h);ctx.fillStyle=colD;ctx.fillRect(x+wobble+2,y+2,this.w-4,this.h-4);
+    ctx.globalAlpha=1;
+};
+DyingEnemy.prototype.isDead=function(){return this.life<=0;};
+
+/* ==================== 稻草人死亡动画 ==================== */
+function DyingScarecrow(x,y){
+    this.x=x;this.y=y;this.w=6;this.h=14;
+    this.vx=(Math.random()>0.5?1:-1)*(1.5+Math.random()*1.5);this.vy=-2-Math.random()*1.5;
+    this.life=30;this.maxLife=30;this.spinPhase=0;
+    // 稻草碎片
+    this.straws=[];
+    for(var i=0;i<8;i++){
+        this.straws.push({
+            dx:(Math.random()-0.5)*6,dy:(Math.random()-0.5)*10,
+            vx:(Math.random()-0.5)*2,vy:-1.5-Math.random()*2,
+            life:20+Math.floor(Math.random()*15)
+        });
+    }
+}
+DyingScarecrow.prototype.update=function(){
+    this.x+=this.vx;this.y+=this.vy;this.vy+=0.1;this.spinPhase+=0.25;this.life--;
+    for(var i=0;i<this.straws.length;i++){
+        var s=this.straws[i];
+        s.dx+=s.vx*0.3;s.dy+=s.vy*0.3;s.vy+=0.06;s.life--;
+    }
+};
+DyingScarecrow.prototype.draw=function(){
+    var alpha=Math.max(0,this.life/this.maxLife);
+    var x=px(this.x),y=px(this.y),wobble=Math.sin(this.spinPhase)*2;
+    // 稻草人身体碎片
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle='#6a5a40';
+    ctx.fillRect(x+wobble,y,6,8);
+    ctx.fillStyle='#5a4030';
+    ctx.fillRect(x+2+wobble,y-2,2,4);
+    // 头部碎片
+    ctx.fillStyle='#c8a050';
+    ctx.fillRect(x+1+wobble,y-4,4,3);
+    // 木桩碎片
+    ctx.fillStyle='#5a4030';
+    ctx.fillRect(x+2+wobble*0.5,y+6,2,6);
+    ctx.globalAlpha=1;
+    // 稻草碎片飞散
+    for(var i=0;i<this.straws.length;i++){
+        var s=this.straws[i];
+        if(s.life>0){
+            ctx.globalAlpha=Math.max(0,s.life/25)*alpha;
+            ctx.fillStyle=Math.random()>0.5?'#d4c080':'#c8b060';
+            ctx.fillRect(x+3+px(s.dx),y+6+px(s.dy),2,1);
+        }
+    }
+    ctx.globalAlpha=1;
+};
+DyingScarecrow.prototype.isDead=function(){return this.life<=0;};
+
+function Cover(x,y,w,h,side){this.x=x;this.y=y;this.w=w;this.h=h;this.side=side;}
+Cover.prototype.draw=function(){
+    var x=px(this.x),y=px(this.y),w=this.w,h=this.h;
+    ctx.fillStyle=PAL.stone;ctx.fillRect(x,y,w,h);
+    if(this.side==='top'){
+        ctx.fillStyle='#2a2a2e';ctx.fillRect(x,y,w,1);
+        ctx.fillStyle=PAL.lightStone;ctx.fillRect(x,y+h-1,w,1);
+        ctx.fillStyle='#605850';ctx.fillRect(x,y+h-2,w,1);
+    }else{
+        ctx.fillStyle=PAL.lightStone;ctx.fillRect(x,y,w,1);
+        ctx.fillStyle='#605850';ctx.fillRect(x,y+1,w,1);
+        ctx.fillStyle='#2a2a2e';ctx.fillRect(x,y+h-1,w,1);
+    }
+    ctx.fillStyle='#4a4840';ctx.fillRect(x,y,1,h);
+    ctx.fillStyle='#2a2820';ctx.fillRect(x+w-1,y,1,h);
+};
+
+/* ==================== 稻草人系统（第一关） ==================== */
+function Scarecrow(x,y){
+    this.x=x; this.y=y; this.w=6; this.h=14;
+    this.swayPhase=Math.random()*Math.PI*2;
+    this.swaySpeed=0.02+Math.random()*0.01;
+}
+Scarecrow.prototype.draw=function(){
+    var x=px(this.x), y=px(this.y);
+    // 摇摆动画
+    this.swayPhase+=this.swaySpeed;
+    var sway=Math.sin(this.swayPhase)*1;
+    
+    // 阴影
+    ctx.fillStyle='rgba(0,0,0,0.15)';
+    ctx.fillRect(x-1,y+12,8,2);
+    
+    // 木桩
+    ctx.fillStyle='#5a4030';
+    ctx.fillRect(x+2,y-2,2,16);
+    ctx.fillStyle='#4a3020';
+    ctx.fillRect(x+2,y-2,1,16);
+    
+    // 十字横杆
+    ctx.fillStyle='#6a5040';
+    ctx.fillRect(x-1,y+1,10,2);
+    ctx.fillStyle='#5a4030';
+    ctx.fillRect(x-1,y+2,10,1);
+    
+    // 头部（草帽+布头）
+    ctx.fillStyle='#c8a050';
+    ctx.fillRect(x+px(sway*0.3),y-4,6,3);
+    // 帽檐
+    ctx.fillStyle='#b89040';
+    ctx.fillRect(x-1+px(sway*0.2),y-2,8,1);
+    ctx.fillRect(x+px(sway*0.3),y-5,6,1);
+    // 脸
+    ctx.fillStyle='#e0c080';
+    ctx.fillRect(x+1+px(sway*0.3),y-1,4,2);
+    // 眼睛（黑色纽扣）
+    ctx.fillStyle='#1a1a1a';
+    ctx.fillRect(x+1+px(sway*0.3),y-1,1,1);
+    ctx.fillRect(x+4+px(sway*0.3),y-1,1,1);
+    // 嘴（红线）
+    ctx.fillStyle='#8a3030';
+    ctx.fillRect(x+2+px(sway*0.3),y,2,1);
+    
+    // 身体（破布衣服）
+    ctx.fillStyle='#6a5a40';
+    ctx.fillRect(x+px(sway*0.5),y+3,6,6);
+    // 衣服条纹
+    ctx.fillStyle='#5a4a30';
+    ctx.fillRect(x+px(sway*0.5),y+4,6,1);
+    ctx.fillRect(x+px(sway*0.5),y+7,6,1);
+    // 衣服破洞
+    ctx.fillStyle='#a8b0c4';
+    ctx.fillRect(x+3+px(sway*0.5),y+5,1,1);
+    
+    // 左手臂（横杆延伸+布条）
+    ctx.fillStyle='#6a5040';
+    ctx.fillRect(x-3,y+1+px(sway*0.8),3,1);
+    // 布条垂下
+    ctx.fillStyle='#8a7a50';
+    ctx.fillRect(x-3,y+2+px(sway*0.6),1,3);
+    ctx.fillRect(x-2,y+3+px(sway*0.7),1,2);
+    
+    // 右手臂
+    ctx.fillStyle='#6a5040';
+    ctx.fillRect(x+7,y+1+px(sway*0.8),3,1);
+    // 布条垂下
+    ctx.fillStyle='#8a7a50';
+    ctx.fillRect(x+9,y+2+px(sway*0.6),1,3);
+    ctx.fillRect(x+8,y+3+px(sway*0.7),1,2);
+    
+    // 腰带
+    ctx.fillStyle='#3a3020';
+    ctx.fillRect(x+px(sway*0.5),y+6,6,1);
+    
+    // 裤子/下摆
+    ctx.fillStyle='#5a5040';
+    ctx.fillRect(x+px(sway*0.3),y+9,6,3);
+    // 稻草露出
+    ctx.fillStyle='#d4c080';
+    ctx.fillRect(x+px(sway*0.3),y+9,1,1);
+    ctx.fillRect(x+5+px(sway*0.3),y+10,1,1);
+    ctx.fillRect(x+2+px(sway*0.3),y+11,1,1);
+    
+    // 底部稻草散落
+    ctx.fillStyle='#c8b060';
+    ctx.fillRect(x,y+12,6,1);
+    ctx.fillStyle='#b8a050';
+    ctx.fillRect(x+1,y+13,4,1);
+};
+
+/* ==================== 稻草人提示文字系统 ==================== */
+var ScarecrowHint = {
+    active: false,
+    scarecrowX: 200,
+    
+    check: function() {
+        if (state.currentLevel !== 1) { this.active = false; return; }
+        if (!state.player) { this.active = false; return; }
+        // 稻草人全部被击杀后提示消失
+        if (state.scarecrows.length === 0) { this.active = false; return; }
+        // 稻草人存在时始终显示
+        this.active = true;
+        // 记录稻草人位置
+        if (state.scarecrows.length > 0) {
+            this.scarecrowX = state.scarecrows[0].x;
+        }
+    },
+    
+    draw: function() {
+        if (!this.active) return;
+        
+        var text = '试着靠近敌人';
+        ctx.save();
+        // 与"第一关"相近的大小
+        ctx.font = 'bold 9px "Microsoft YaHei", "SimHei", "PingFang SC", sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        
+        // 文字在稻草人左边，垂直居中于稻草人列
+        var textX = this.scarecrowX - 8;
+        var textY = 80;
+        
+        // 微弱呼吸动画
+        var breath = 0.8 + 0.2 * Math.sin(state.globalTick * 0.05);
+        ctx.globalAlpha = breath;
+        
+        // 半透明黑色背景
+        var metrics = ctx.measureText(text);
+        var tw = metrics.width;
+        var th = 9;
+        var padX = 4, padY = 2;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(textX - tw - padX, textY - th / 2 - padY, tw + padX * 2, th + padY * 2);
+        
+        // 黄色文字，无描边，与画面中其他黄色一致
+        ctx.fillStyle = '#ffcc00';
+        ctx.fillText(text, textX, textY);
+        
+        ctx.restore();
+    }
+};
+
+function drawSimpleEnemy(x,y,v,marked){
+    var ex=px(x),ey=px(y);var robeC,robeD;
+    if(v===0){robeC=PAL.cinnabar;robeD=PAL.darkCinn;}
+    else if(v===1){robeC=PAL.ninja;robeD=PAL.ninjaDark;}
+    else{robeC='#703030';robeD='#502020';}
+    ctx.fillStyle='rgba(0,0,0,0.2)';ctx.fillRect(ex-1,ey+11,10,2);
+    ctx.fillStyle=v===0?PAL.darkCinn:v===1?PAL.ninjaDark:'#3a2020';
+    ctx.fillRect(ex-1,ey-1,10,2);ctx.fillRect(ex+1,ey-3,6,2);
+    ctx.fillStyle=PAL.darkSkin;ctx.fillRect(ex+1,ey+1,6,2);
+    ctx.fillStyle=robeC;ctx.fillRect(ex,ey+3,8,4);
+    ctx.fillStyle=robeD;ctx.fillRect(ex+3,ey+3,2,4);ctx.fillRect(ex+1,ey+7,6,3);
+    ctx.fillRect(ex+2,ey+10,2,2);ctx.fillRect(ex+4,ey+10,2,2);
+}
+
+/* ==================== 关卡管理 ==================== */
+function loadLevel(levelId) {
+    var level = LEVELS[levelId - 1];
+    if (!level) {
+        gameWin();
+        return;
+    }
+    
+    state.currentLevel = levelId;
+    state.enemies = [];
+    state.pearls = [];
+    state.projectiles = [];
+    state.dyingEnemies = [];
+    state.covers = [];
+    state.scarecrows = [];
+    state.scarecrowKilled = 0;
+    state.scarecrowInitialCount = 0;
+    
+    // 设置玩家位置
+    var startPos = state.lastCheckpoint || level.playerStart;
+    if (state.player) {
+        state.player.x = startPos.x;
+        state.player.y = startPos.y;
+    } else {
+        state.player = new Player(startPos.x, startPos.y);
+    }
+    
+    // 加载敌人
+    var defenderRef = null;
+    var partnerRef = null;
+    level.enemies.forEach(function(e) {
+        if (e.type === 'ShieldGuard') {
+            var enemy = new ShieldGuard(e.x, e.y, e.name, e.armor, e.tall);
+            state.enemies.push(enemy);
+        } else if (e.type === 'ShieldDefender') {
+            var enemy = new ShieldDefender(e.x, e.y, e.name, e.armor, e.tall);
+            defenderRef = enemy;
+            state.enemies.push(enemy);
+        } else if (e.type === 'ShieldPartner') {
+            var enemy = new ShieldPartner(e.x, e.y, e.name, e.armor, e.tall);
+            partnerRef = enemy;
+            state.enemies.push(enemy);
+        } else {
+            var enemy = new Enemy(e.x, e.y);
+            state.enemies.push(enemy);
+        }
+    });
+    
+    // 建立搭档关系
+    if (defenderRef && partnerRef) {
+        defenderRef.partner = partnerRef;
+        partnerRef.defender = defenderRef;
+    }
+    
+    // 加载障碍物
+    level.covers.forEach(function(c) {
+        state.covers.push(new Cover(c.x, c.y, c.w, c.h, c.side));
+    });
+    
+    // 第一关：加载稻草人（阻挡玩家前进的稻草人墙）
+    if (level.id === 1 && level.scarecrowRow) {
+        scarecrowCoverIndices = [];
+        var row = level.scarecrowRow;
+        state.scarecrowInitialCount = row.count;
+        state.scarecrowKilled = 0;
+        var spacing = (row.yEnd - row.yStart) / (row.count - 1);
+        for (var si = 0; si < row.count; si++) {
+            var sy = Math.floor(row.yStart + si * spacing);
+            var sc = new Scarecrow(row.x, sy);
+            state.scarecrows.push(sc);
+            // 稻草人作为碰撞体阻挡玩家，记录索引以便击杀时移除
+            var coverIdx = state.covers.length;
+            state.covers.push(new Cover(row.x, sy - 2, 6, 16, 'top'));
+            scarecrowCoverIndices.push(coverIdx);
+        }
+    } else {
+        scarecrowCoverIndices = [];
+    }
+    
+    // 加载珍珠
+    level.pearls.forEach(function(p) {
+        state.pearls.push({ x: p.x, y: p.y, r: 4, active: true });
+    });
+    
+    // 加载时间回溯道具
+    if (level.rewindItem) {
+        state.rewindItem = { x: level.rewindItem.x, y: level.rewindItem.y, active: true };
+    } else {
+        state.rewindItem = { x: 0, y: 0, active: false };
+    }
+    
+    // 渲染关卡背景
+    renderLevelBG(level);
+    
+    // 更新UI
+    levelNumberEl.innerText = levelId;
+    levelNameEl.innerText = level.name;
+    
+    // 重置状态
+    state.timeStopped = false;
+    state.stopTimer = 0;
+    stopDisplay.style.display = 'none';
+    markHint.style.display = 'none';
+    rewindDisplay.style.display = 'none';
+    hasRewind = false;
+    stateHistory = [];
+    camera.x = 0;
+    
+    // 初始化环境粒子
+    initAmbient();
+    
+    // 保存游戏
+    saveGame();
+    
+    // 显示关卡开始提示
+    LevelStartEffect.show(level);
+}
+
+/* ==================== 绿宝石存档点 ==================== */
+function drawCheckpoint() {
+    var level = LEVELS[state.currentLevel - 1];
+    if (!level.checkpoint) return;
+    
+    var x = px(level.checkpoint.x);
+    var y = px(level.checkpoint.y);
+    
+    // 判断是否已激活（玩家已触碰）
+    var activated = state.lastCheckpoint && 
+                    state.lastCheckpoint.x === level.checkpoint.x;
+    var pulse = 0.6 + Math.sin(state.globalTick * 0.08) * 0.4;
+    
+    if (activated) {
+        // 激活状态 - 亮绿色
+        drawPxCircle(x, y, 5, 'rgba(0,255,136,'+(0.15*pulse)+')');
+        drawPxCircle(x, y, 3, 'rgba(0,255,136,'+(0.3*pulse)+')');
+        ctx.fillStyle = PAL.emerald;
+        ctx.fillRect(x-1,y-2,3,1);ctx.fillRect(x-2,y-1,5,1);
+        ctx.fillRect(x-3,y,7,1);ctx.fillRect(x-2,y+1,5,1);
+        ctx.fillRect(x-1,y+2,3,1);
+        ctx.fillStyle = '#aaffcc';
+        ctx.fillRect(x,y-1,1,1);
+        
+        // 粒子效果
+        if (state.globalTick % 8 === 0) {
+            state.effects.push({
+                x: level.checkpoint.x + (Math.random()-0.5)*10,
+                y: level.checkpoint.y + (Math.random()-0.5)*6,
+                life: 12, maxLife: 12, type: 'gem-spark'
+            });
+        }
+    } else {
+        // 未激活状态 - 暗绿色
+        drawPxCircle(x, y, 4, 'rgba(0,200,100,0.1)');
+        ctx.fillStyle = '#008844';
+        ctx.fillRect(x-1,y-1,3,1);ctx.fillRect(x-2,y,5,1);
+        ctx.fillRect(x-1,y+1,3,1);
+        ctx.fillStyle = '#00aa55';
+        ctx.fillRect(x,y,1,1);
+    }
+}
+
+function checkCheckpoint() {
+    var level = LEVELS[state.currentLevel - 1];
+    if (!level.checkpoint) return;
+    
+    var playerCenterX = state.player.x + 4;
+    var playerCenterY = state.player.y + 6;
+    var dist = Math.hypot(playerCenterX - level.checkpoint.x, playerCenterY - level.checkpoint.y);
+    
+    if (dist < 15) {
+        // 检查是否是新的存档点
+        if (!state.lastCheckpoint || 
+            state.lastCheckpoint.x !== level.checkpoint.x ||
+            state.lastCheckpoint.y !== level.checkpoint.y) {
+            
+            state.lastCheckpoint = { x: level.checkpoint.x, y: level.checkpoint.y };
+            saveGame();
+            showCheckpointHint();
+            
+            // 存档特效
+            state.effects.push({
+                x: level.checkpoint.x, y: level.checkpoint.y,
+                r: 0, type: 'checkpoint-wave'
+            });
+        }
+    }
+}
+
+/* ==================== 关卡完成检测 ==================== */
+function checkLevelComplete() {
+    if (state.enemies.length === 0 && state.dyingEnemies.length === 0 && !state.transitioning) {
+        state.transitioning = true;
+        
+        // 延迟进入下一关
+        setTimeout(function() {
+            LevelStartEffect.hide();
+            if (state.currentLevel < LEVELS.length) {
+                state.lastCheckpoint = null; // 新关卡重置存档点
+                loadLevel(state.currentLevel + 1);
+            } else {
+                gameWin();
+            }
+            state.transitioning = false;
+        }, 800); // 缩短延迟时间
+    }
+}
+
+/* ==================== 时间回溯系统 ==================== */
+function captureState(){
+    if(stateHistory.length>REWIND_FRAMES+100)stateHistory=stateHistory.slice(-REWIND_FRAMES-50);
+    stateHistory.push({
+        px:state.player.x,py:state.player.y,fr:state.player.facingRight,
+        enemies:state.enemies.map(function(e){
+            return{
+                x:e.x,y:e.y,marked:e.marked,sc:e.shootCooldown,
+                dx:e.dirX,dy:e.dirY,mt:e.moveTimer,v:e.variant,
+                shieldHP: e.shieldHP, shieldBroken: e.shieldBroken
+            };
+        }),
+        pearls:state.pearls.map(function(p){return p.active;}),
+        rw:state.rewindItem.active,
+        ts:state.timeStopped,st:state.stopTimer
+    });
+}
+
+function triggerRewind(){
+    if(!hasRewind||stateHistory.length<REWIND_FRAMES){
+        respawnAtCheckpoint();
+        return;
+    }
+    isRewinding=true;rewindIndex=stateHistory.length-1;hasRewind=false;
+    stopDisplay.style.display='none';markHint.style.display='none';rewindDisplay.style.display='none';
+}
+
+function updateRewind(){
+    rewindIndex-=REWIND_SPEED;
+    var targetIdx=stateHistory.length-1-REWIND_FRAMES;
+    if(rewindIndex<=targetIdx){
+        rewindIndex=targetIdx;
+        var snap=stateHistory[rewindIndex];
+        restoreState(snap);
+        stateHistory=stateHistory.slice(0,rewindIndex);
+        isRewinding=false;
+        state.effects.push({life:12,maxLife:12,type:'rewind-flash'});
+    }
+}
+
+function restoreState(snap){
+    state.player.x=snap.px;state.player.y=snap.py;state.player.facingRight=snap.fr;
+    state.enemies=snap.enemies.map(function(e){
+        var en;
+        if(e.shieldHP !== undefined) {
+            en = new ShieldGuard(e.x, e.y, '', 'black', true);
+            en.shieldHP = e.shieldHP;
+            en.shieldBroken = e.shieldBroken;
+        } else {
+            en = new Enemy(e.x,e.y);
+            en.variant=e.v;
+        }
+        en.marked=e.marked;en.shootCooldown=e.sc;en.dirX=e.dx;en.dirY=e.dy;en.moveTimer=e.mt;
+        return en;
+    });
+    snap.pearls.forEach(function(a,i){if(i<state.pearls.length)state.pearls[i].active=a;});
+    state.rewindItem.active=snap.rw;
+    if(snap.rw){hasRewind=false;rewindDisplay.style.display='none';}
+    state.timeStopped=snap.ts;state.stopTimer=snap.st;
+    if(state.timeStopped){stopDisplay.style.display='block';updateStopUI();}else{stopDisplay.style.display='none';}
+    state.projectiles=[];state.dyingEnemies=[];state.running=true;
+    msgScreen.style.display='none';
+}
+
+function drawRewindFrame(){
+    var idx=Math.max(0,Math.min(rewindIndex,stateHistory.length-1));
+    var snap=stateHistory[idx];if(!snap)return;
+    ctx.drawImage(bgCanvas,0,0);
+    state.covers.forEach(function(c){c.draw();});
+    var px2=px(snap.px),py2=px(snap.py);
+    ctx.fillStyle=PAL.straw;ctx.fillRect(px2-2,py2-2,12,2);
+    ctx.fillStyle=PAL.skin;ctx.fillRect(px2+1,py2,6,3);
+    ctx.fillStyle=PAL.white;ctx.fillRect(px2,py2+3,8,3);
+    ctx.fillStyle='#d0c8b8';ctx.fillRect(px2+1,py2+7,6,3);
+    ctx.fillStyle='#2a2420';ctx.fillRect(px2+2,py2+10,2,2);ctx.fillRect(px2+4,py2+10,2,2);
+    snap.enemies.forEach(function(e){drawSimpleEnemy(e.x,e.y,e.v,e.marked);});
+    ctx.fillStyle='rgba(15,25,60,0.5)';ctx.fillRect(camera.x,0,320,180);
+}
+
+/* ==================== 碰撞检测 ==================== */
+function checkCollisions(){
+    for(var ki=state.projectiles.length-1;ki>=0;ki--){
+        var knife=state.projectiles[ki];if(!knife.alive)continue;
+        if(knife.x<state.player.x+state.player.w&&knife.x+2>state.player.x&&knife.y<state.player.y+state.player.h&&knife.y+2>state.player.y){
+            knife.alive=false;state.effects.push({life:6,maxLife:6,type:'flash'});triggerShake(3,8);
+            if(hasRewind){triggerRewind();}
+            else{
+                respawnAtCheckpoint();
+            }
+            return;
+        }
+        for(var ci=0;ci<state.covers.length;ci++){
+            var c=state.covers[ci];
+            if(knife.x<c.x+c.w&&knife.x+2>c.x&&knife.y<c.y+c.h&&knife.y+2>c.y){
+                state.effects.push({x:knife.x,y:knife.y,vx:(Math.random()-0.5)*1.5,vy:(Math.random()-0.5)*1.5,life:6,maxLife:6,type:'spark'});
+                knife.alive=false;break;
+            }
+        }
+    }
+    
+    for(var ei=state.enemies.length-1;ei>=0;ei--){
+        var e=state.enemies[ei];
+        var collW = e.w || 8;
+        var collH = e.h || 12;
+        var dist=Math.hypot(e.x+collW/2-(state.player.x+4),e.y+collH/2-(state.player.y+6));
+        if(state.timeStopped){
+            if(e instanceof ShieldGuard && !e.shieldBroken) continue;
+            if(e instanceof ShieldDefender) continue; // 盾卫在时间静止时无法标记/击杀
+            if(dist<MARK_RANGE&&!e.marked){
+                e.marked=true;markHint.style.display='block';
+                var qx=e.x+collW/2,qy=e.y+collH/2;
+                state.effects.push({x:qx,y:qy,life:12,maxLife:12,type:'qi-slash'});
+                state.effects.push({x:qx,y:qy,r:0,type:'qi-ring'});
+                triggerShake(1,4);
+            }
+        }else{
+            if(dist<22){
+                var playerCenterX = state.player.x + 4;
+                var playerCenterY = state.player.y + 6;
+                var enemyCenterX = e.x + collW/2;
+                var enemyCenterY = e.y + collH/2;
+                
+                if(!hasLineOfSight(playerCenterX, playerCenterY, enemyCenterX, enemyCenterY)){
+                    continue;
+                }
+                
+                if(e instanceof ShieldGuard){
+                    if(!e.shieldBroken){
+                        e.shieldHP--;
+                        e.hitFlash = 8;
+                        triggerShake(3,6);
+                        state.effects.push({x:e.x-2,y:e.y+collH/2,life:10,maxLife:10,type:'shield-hit'});
+                        if(e.shieldHP <= 0){
+                            e.shieldBroken = true;
+                            triggerShake(4,10);
+                        }
+                    }else{
+                        state.effects.push({x:e.x+collW/2,y:e.y+collH/2,life:8,maxLife:8,type:'slash'});
+                        state.enemies.splice(ei,1);triggerShake(3,6);
+                    }
+                }else if(e instanceof ShieldDefender){
+                    // 哧吭：盾牌面向玩家，只能从背面击杀
+                    if(e.isPlayerBehind()){
+                        // 从背面击杀！
+                        state.effects.push({x:e.x+collW/2,y:e.y+collH/2,life:10,maxLife:10,type:'slash'});
+                        state.dyingEnemies.push(new DyingEnemy(e.x,e.y,1));
+                        state.enemies.splice(ei,1);triggerShake(4,8);
+                    }else{
+                        // 正面被盾牌挡住
+                        e.hitFlash = 6;
+                        triggerShake(2,4);
+                        state.effects.push({x:e.x+(e.shieldDir===1?-4:collW),y:e.y+collH/2,life:8,maxLife:8,type:'shield-hit'});
+                    }
+                }else{
+                    state.effects.push({x:e.x+4,y:e.y+6,life:8,maxLife:8,type:'slash'});
+                    state.enemies.splice(ei,1);triggerShake(2,5);
+                }
+            }
+        }
+    }
+    
+    // 撞击稻草人击杀
+    if(state.scarecrows.length > 0 && !state.timeStopped){
+        for(var sci=state.scarecrows.length-1;sci>=0;sci--){
+            var sc=state.scarecrows[sci];
+            var dist=Math.hypot(sc.x+sc.w/2-(state.player.x+4),sc.y+sc.h/2-(state.player.y+6));
+            if(dist<18){
+                // 击杀稻草人
+                state.dyingEnemies.push(new DyingScarecrow(sc.x,sc.y));
+                state.effects.push({x:sc.x+sc.w/2,y:sc.y+sc.h/2,life:8,maxLife:8,type:'slash'});
+                // 移除稻草人
+                state.scarecrows.splice(sci,1);
+                state.scarecrowKilled++;
+                // 移除对应的碰撞体（注意索引偏移）
+                if(sci < scarecrowCoverIndices.length){
+                    var coverIdxToRemove = scarecrowCoverIndices[sci];
+                    state.covers.splice(coverIdxToRemove,1);
+                    // 更新后续索引
+                    for(var ci2=sci+1;ci2<scarecrowCoverIndices.length;ci2++){
+                        scarecrowCoverIndices[ci2]--;
+                    }
+                    scarecrowCoverIndices.splice(sci,1);
+                }
+                triggerShake(2,4);
+                break; // 一次只撞一个
+            }
+        }
+    }
+    
+    // 拾取珍珠
+    for(var pi=0;pi<state.pearls.length;pi++){
+        var p=state.pearls[pi];
+        if(p.active&&Math.hypot(p.x-state.player.x,p.y-state.player.y)<20){
+            p.active=false;triggerTimeStop();
+        }
+    }
+    
+    // 拾取时间回溯道具
+    if(state.rewindItem.active&&Math.hypot(state.rewindItem.x-state.player.x,state.rewindItem.y-state.player.y)<20){
+        state.rewindItem.active=false;hasRewind=true;rewindDisplay.style.display='block';
+        state.effects.push({life:8,maxLife:8,type:'rewind-flash'});
+    }
+}
+
+function respawnAtCheckpoint() {
+    var level = LEVELS[state.currentLevel - 1];
+    var spawnPos = state.lastCheckpoint || level.playerStart;
+    
+    state.player.x = spawnPos.x;
+    state.player.y = spawnPos.y;
+    state.projectiles = [];
+    state.timeStopped = false;
+    state.stopTimer = 0;
+    stopDisplay.style.display = 'none';
+    markHint.style.display = 'none';
+    
+    // 重新加载当前关卡
+    loadLevel(state.currentLevel);
+    
+    // 恢复到存档点
+    if (state.lastCheckpoint) {
+        state.player.x = state.lastCheckpoint.x;
+        state.player.y = state.lastCheckpoint.y;
+    }
+    
+    state.effects.push({life:12,maxLife:12,type:'rewind-flash'});
+    triggerShake(2,8);
+}
+
+/* ==================== 时间静止 ==================== */
+function triggerTimeStop(){
+    state.timeStopped=true;
+    state.stopStartTime=performance.now();
+    state.stopTimer=STOP_DURATION;
+    stopDisplay.style.display='block';markHint.style.display='none';
+    state.effects.push({x:state.player.x+4,y:state.player.y+6,r:0,type:'wave'});
+    state.effects.push({life:8,maxLife:8,type:'flash'});triggerShake(2,6);
+}
+
+function launchMarkedEnemies(){
+    var marked=state.enemies.filter(function(e){return e.marked;});
+    if(marked.length===0){markHint.style.display='none';return;}
+    marked.forEach(function(e){
+        state.dyingEnemies.push(new DyingEnemy(e.x,e.y,e.variant));
+        state.effects.push({x:e.x+4,y:e.y+6,life:12,maxLife:12,type:'launch-slash'});
+    });
+    state.enemies=state.enemies.filter(function(e){return !e.marked;});
+    triggerShake(4,10);markHint.style.display='none';
+}
+
+function updateStopUI(){
+    var secs=Math.ceil(state.stopTimer/1000);
+    var pct=(state.stopTimer/STOP_DURATION)*100;
+    stopSecondsEl.innerText=secs;stopBarEl.style.width=pct+'%';
+}
+
+function getTimeStopFilter(){
+    if(!state.timeStopped)return 'none';
+    var progress=1-state.stopTimer/STOP_DURATION;
+    return 'grayscale('+Math.max(0,1-progress)+') saturate('+(0.15+progress*0.85)+') brightness('+(0.65+progress*0.35)+')';
+}
+
+function drawTimeStopOverlay(){
+    var progress=1-state.stopTimer/STOP_DURATION;
+    var alpha=Math.max(0,0.08*(1-progress));
+    ctx.fillStyle='rgba(0,180,180,'+alpha+')';ctx.fillRect(camera.x,0,320,180);
+}
+
+/* ==================== 特效系统 ==================== */
+function drawEffects(){
+    for(var i=state.effects.length-1;i>=0;i--){
+        var eff=state.effects[i];
+        if(eff.type==='wave'){
+            eff.r+=3;var a=Math.max(0,1-eff.r/120);
+            ctx.strokeStyle='rgba(0,204,204,'+(a*0.6)+')';ctx.lineWidth=1;
+            ctx.beginPath();ctx.arc(px(eff.x),px(eff.y),eff.r,0,Math.PI*2);ctx.stroke();
+            if(eff.r>120)state.effects.splice(i,1);
+        }else if(eff.type==='checkpoint-wave'){
+            eff.r+=4;var a=Math.max(0,1-eff.r/80);
+            ctx.strokeStyle='rgba(0,255,136,'+(a*0.8)+')';ctx.lineWidth=2;
+            ctx.beginPath();ctx.arc(px(eff.x),px(eff.y),eff.r,0,Math.PI*2);ctx.stroke();
+            if(eff.r>80)state.effects.splice(i,1);
+        }else if(eff.type==='qi-slash'){
+            var p=1-eff.life/eff.maxLife;var size=4+p*14;
+            ctx.strokeStyle='rgba(100,200,255,'+((1-p)*0.8)+')';ctx.lineWidth=Math.max(0.5,2-p);
+            ctx.beginPath();ctx.moveTo(px(eff.x-size),px(eff.y-size));ctx.lineTo(px(eff.x+size),px(eff.y+size));ctx.stroke();
+            ctx.beginPath();ctx.moveTo(px(eff.x+size),px(eff.y-size));ctx.lineTo(px(eff.x-size),px(eff.y+size));ctx.stroke();
+            eff.life--;if(eff.life<=0)state.effects.splice(i,1);
+        }else if(eff.type==='qi-ring'){
+            eff.r+=2.5;var a=Math.max(0,1-eff.r/60);
+            ctx.strokeStyle='rgba(80,180,255,'+(a*0.6)+')';ctx.lineWidth=1;
+            ctx.beginPath();ctx.arc(px(eff.x),px(eff.y),eff.r,0,Math.PI*2);ctx.stroke();
+            if(eff.r>60)state.effects.splice(i,1);
+        }else if(eff.type==='spark'){
+            eff.x+=eff.vx;eff.y+=eff.vy;eff.vx*=0.92;eff.vy*=0.92;
+            ctx.fillStyle='rgba(255,220,120,'+Math.max(0,eff.life/eff.maxLife)+')';ctx.fillRect(px(eff.x),px(eff.y),1,1);
+            eff.life--;if(eff.life<=0)state.effects.splice(i,1);
+        }else if(eff.type==='gem-spark'){
+            ctx.fillStyle='rgba(0,255,136,'+(Math.max(0,eff.life/eff.maxLife)*0.7)+')';ctx.fillRect(px(eff.x),px(eff.y),1,1);
+            eff.life--;if(eff.life<=0)state.effects.splice(i,1);
+        }else if(eff.type==='flash'){
+            ctx.fillStyle='rgba(200,240,240,'+(eff.life/eff.maxLife*0.3)+')';ctx.fillRect(camera.x,0,320,180);
+            eff.life--;if(eff.life<=0)state.effects.splice(i,1);
+        }else if(eff.type==='rewind-flash'){
+            var a=eff.life/eff.maxLife;
+            ctx.fillStyle='rgba(100,180,255,'+(a*0.4)+')';ctx.fillRect(camera.x,0,320,180);
+            eff.life--;if(eff.life<=0)state.effects.splice(i,1);
+        }else if(eff.type==='dying-trail'){
+            ctx.fillStyle=eff.color.replace('1)',(Math.max(0,eff.life/eff.maxLife)*0.6)+')');ctx.fillRect(px(eff.x),px(eff.y),1,1);
+            eff.life--;if(eff.life<=0)state.effects.splice(i,1);
+        }else if(eff.type==='push-spark'){
+            ctx.fillStyle='rgba(180,200,220,'+(Math.max(0,eff.life/eff.maxLife)*0.35)+')';ctx.fillRect(px(eff.x),px(eff.y),1,1);
+            eff.life--;if(eff.life<=0)state.effects.splice(i,1);
+        }else if(eff.type==='shield-hit'){
+            var p=1-eff.life/eff.maxLife;
+            ctx.fillStyle='rgba(100,150,255,'+((1-p)*0.8)+')';
+            ctx.fillRect(px(eff.x-2),px(eff.y-3),6,1);
+            eff.life--;if(eff.life<=0)state.effects.splice(i,1);
+        }else if(eff.type==='slash'){
+            var p=1-eff.life/eff.maxLife;
+            ctx.strokeStyle='rgba(232,224,208,'+(1-p)+')';ctx.lineWidth=2-p;
+            ctx.beginPath();ctx.moveTo(px(eff.x-12),px(eff.y-12));ctx.lineTo(px(eff.x+12),px(eff.y+12));ctx.stroke();
+            eff.life--;if(eff.life<=0)state.effects.splice(i,1);
+        }else if(eff.type==='launch-slash'){
+            var p=1-eff.life/eff.maxLife;
+            ctx.strokeStyle='rgba(255,240,200,'+(1-p)+')';ctx.lineWidth=3-p*2;
+            ctx.beginPath();ctx.moveTo(px(eff.x-18),px(eff.y-18));ctx.lineTo(px(eff.x+18),px(eff.y+18));ctx.stroke();
+            ctx.strokeStyle='rgba(255,180,80,'+((1-p)*0.7)+')';ctx.lineWidth=1;
+            ctx.beginPath();ctx.moveTo(px(eff.x+18),px(eff.y-18));ctx.lineTo(px(eff.x-18),px(eff.y+18));ctx.stroke();
+            eff.life--;if(eff.life<=0)state.effects.splice(i,1);
+        }else if(eff.type==='death-burst'){
+            eff.particles.forEach(function(pt){pt.x+=pt.vx;pt.y+=pt.vy;pt.vy+=0.08;var a=Math.max(0,eff.life/eff.maxLife);ctx.fillStyle=pt.color.replace('1)',a+')');ctx.fillRect(px(pt.x),px(pt.y),1,1);});
+            eff.life--;if(eff.life<=0)state.effects.splice(i,1);
+        }
+    }
+}
+
+function drawBackground(){ctx.drawImage(bgCanvas,0,0);}
+
+function drawPearl(p){
+    if(!p.active)return;
+    var floatY=Math.sin(state.globalTick*0.05)*1;
+    var x=px(p.x),y=px(p.y+floatY);
+    var pulse=0.6+Math.sin(state.globalTick*0.08)*0.4;
+    drawPxCircle(x,y,4,'rgba(0,204,204,'+(0.15*pulse)+')');
+    drawPxCircle(x,y,2,PAL.pearl);
+    ctx.fillStyle='#aaffff';ctx.fillRect(x-1,y-1,1,1);
+}
+
+function drawRewindItemSprite(){
+    if(!state.rewindItem.active)return;
+    var floatY=Math.sin(state.globalTick*0.04)*1;
+    var x=px(state.rewindItem.x),y=px(state.rewindItem.y+floatY);
+    var pulse=0.6+Math.sin(state.globalTick*0.07)*0.4;
+    drawPxCircle(x,y,4,'rgba(80,120,240,'+(0.15*pulse)+')');
+    ctx.fillStyle='#4488ff';
+    ctx.fillRect(x,y-3,1,1);ctx.fillRect(x-1,y-2,3,1);ctx.fillRect(x-2,y-1,5,1);
+    ctx.fillRect(x-3,y,7,1);ctx.fillRect(x-2,y+1,5,1);ctx.fillRect(x-1,y+2,3,1);ctx.fillRect(x,y+3,1,1);
+    ctx.fillStyle='#88aaff';ctx.fillRect(x-1,y-1,3,3);
+}
+
+/* ==================== 游戏结束 ==================== */
+function gameOver(txt){
+    state.running=false;
+    msgText.innerText=txt;
+    msgText.style.color='#ffd700';
+    msgSub.innerText = '按 R 键从存档点复活';
+    msgScreen.style.display='block';
+}
+
+function gameWin(){
+    state.running=false;
+    msgText.innerText="事了拂衣去，深藏功与名。";
+    msgText.style.color='#ffcc00';
+    msgSub.innerText = '按r重入江湖';
+    msgScreen.style.display='block';
+    // 清除存档
+    localStorage.removeItem(SAVE_KEY);
+}
+
+/* ==================== 初始化 ==================== */
+function init(){
+    // 尝试加载存档
+    var savedGame = loadGame();
+    
+    state.keys={};
+    state.projectiles=[];
+    state.effects=[];
+    state.dyingEnemies=[];
+    state.running=true;
+    state.timeStopped=false;
+    state.stopTimer=0;
+    state.stopStartTime=0;
+    state.globalTick=0;
+    state.isMoving=false;
+    state.transitioning=false;
+    
+    hasRewind=false;
+    isRewinding=false;
+    rewindIndex=0;
+    stateHistory=[];
+    lastFrameTime=performance.now();
+    
+    msgScreen.style.display='none';
+    LevelStartEffect.hide();
+    stopDisplay.style.display='none';
+    markHint.style.display='none';
+    rewindDisplay.style.display='none';
+    
+    if (savedGame && savedGame.currentLevel) {
+        // 从存档加载
+        state.lastCheckpoint = savedGame.checkpoint;
+        loadLevel(savedGame.currentLevel);
+        if (savedGame.checkpoint) {
+            state.player.x = savedGame.checkpoint.x;
+            state.player.y = savedGame.checkpoint.y;
+        }
+    } else {
+        // 新游戏
+        state.lastCheckpoint = null;
+        loadLevel(1);
+    }
+}
+
+/* ==================== 主循环 ==================== */
+function gameLoop(currentTime){
+    if(!state.running&&!isRewinding)return requestAnimationFrame(gameLoop);
+    state.globalTick++;
+    
+    var deltaTime=currentTime-lastFrameTime;
+    lastFrameTime=currentTime;
+
+    // 更新摄像机位置
+    updateCamera();
+
+    if(isRewinding){
+        updateRewind();updateShake();updateAmbient();
+        ctx.save();ctx.translate(shake.x-camera.x,shake.y);ctx.clearRect(camera.x-10,-10,340,200);
+        drawRewindFrame();
+        ctx.restore();
+        requestAnimationFrame(gameLoop);return;
+    }
+
+    // 关卡开始提示阶段：暂停游戏逻辑（玩家无法操控，敌人不会攻击）
+    if(LevelStartEffect.active){
+        LevelStartEffect.update();
+        updateShake();updateAmbient();
+        ctx.save();ctx.translate(shake.x-camera.x,shake.y);ctx.clearRect(camera.x-10,-10,340,200);
+        drawBackground();
+        state.covers.forEach(function(c){c.draw();});
+        state.scarecrows.forEach(function(sc){sc.draw();});
+        drawAmbient();
+        state.pearls.forEach(function(p){drawPearl(p);});
+        drawRewindItemSprite();
+        drawCheckpoint();
+        state.enemies.forEach(function(e){e.draw();});
+        drawEffects();
+        state.player.draw();
+        ctx.restore();
+        LevelStartEffect.draw(ctx);
+        requestAnimationFrame(gameLoop);return;
+    }
+
+    state.player.update();
+    captureState();
+
+    if(state.timeStopped){
+        var elapsed=performance.now()-state.stopStartTime;
+        state.stopTimer=Math.max(0,STOP_DURATION-elapsed);
+        updateStopUI();
+        if(state.stopTimer<=0){
+            state.timeStopped=false;stopDisplay.style.display='none';launchMarkedEnemies();
+        }
+    }
+
+    state.enemies.forEach(function(e){e.update();});
+    state.projectiles.forEach(function(k){k.update();});
+    state.projectiles=state.projectiles.filter(function(k){return k.alive;});
+
+    for(var di=state.dyingEnemies.length-1;di>=0;di--){
+        state.dyingEnemies[di].update();
+        if(state.dyingEnemies[di].isDead()){
+            state.dyingEnemies.splice(di,1);
+        }
+    }
+
+    checkCollisions();
+    checkCheckpoint();
+    checkLevelComplete();
+    updateShake();updateAmbient();
+
+    // 绘制世界空间内容（受摄像机偏移影响）
+    ctx.save();ctx.translate(shake.x-camera.x,shake.y);ctx.clearRect(camera.x-10,-10,340,200);
+    var filterStr=getTimeStopFilter();
+    if(filterStr!=='none')ctx.filter=filterStr;
+    drawBackground();
+    state.covers.forEach(function(c){c.draw();});
+    // 绘制稻草人（第一关）
+    state.scarecrows.forEach(function(sc){sc.draw();});
+    drawAmbient();
+    state.pearls.forEach(function(p){drawPearl(p);});
+    drawRewindItemSprite();
+    drawCheckpoint();
+    state.projectiles.forEach(function(k){k.draw();});
+    state.enemies.forEach(function(e){e.draw();});
+    state.dyingEnemies.forEach(function(de){de.draw();});
+    ctx.filter='none';
+    drawEffects();
+    state.player.draw();
+    if(state.timeStopped)drawTimeStopOverlay();
+    // 稻草人接近提示（在摄像机空间内绘制）
+    ScarecrowHint.check();
+    ScarecrowHint.draw();
+    ctx.restore();
+
+    // 绘制屏幕空间内容（不受摄像机偏移影响）
+    LevelStartEffect.draw(ctx);
+
+    requestAnimationFrame(gameLoop);
+}
+
+window.addEventListener('keydown',function(e){
+    state.keys[e.key.toLowerCase()]=true;
+    if(e.key.toLowerCase()==='r'){
+        if(!state.running){
+            init();
+        }
+    }
+});
+window.addEventListener('keyup',function(e){state.keys[e.key.toLowerCase()]=false;});
+
+init();requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
