@@ -1098,8 +1098,7 @@ var LEVELS = [
             { type: 'Enemy', x: 840, y: 100 },
             { type: 'FastPatrolEnemy', x: 1150, y: 70, patrolX1: 1100, patrolX2: 1250, patrolY: 70 },
             { type: 'FastPatrolEnemy', x: 1280, y: 100, patrolX1: 1200, patrolX2: 1350, patrolY: 100 },
-            { type: 'FastPatrolEnemy', x: 1400, y: 60, patrolX1: 1350, patrolX2: 1450, patrolY: 60 },
-            { type: 'FastPatrolEnemy', x: 1380, y: 110, patrolX1: 1300, patrolX2: 1450, patrolY: 110 }
+            { type: 'FastPatrolEnemy', x: 1400, y: 60, patrolX1: 1350, patrolX2: 1450, patrolY: 60 }
         ],
         covers: [
             { x: 460, y: 50, w: 10, h: 16, side: 'top' },
@@ -6716,15 +6715,7 @@ MeleeBoss.prototype.update = function() {
             state.effects.push({ life: 6, maxLife: 6, type: 'flash' });
             triggerShake(3, 8);
             if (state.currentLevel === 2) { L2SecretDoor.onDeath(); }
-            // 第四关：软复活（不触发gameOver，玩家回到起点继续游戏）
-            if (state.currentLevel === 4) {
-                var stats4 = (bp === state.player2) ? PlayerStats2 : PlayerStats;
-                stats4.totalDeaths++;
-                bp.x = LEVELS[3].playerStart.x;
-                bp.y = LEVELS[3].playerStart.y;
-                bp.facingRight = !LEVELS[3].playerStart.facingLeft;
-                state.effects.push({ life: 12, maxLife: 12, type: 'flash' });
-            } else if (hasRewind) { triggerRewind((bp === state.player2) ? 2 : 1); }
+            if (hasRewind) { triggerRewind((bp === state.player2) ? 2 : 1); }
             else { dyingPlayerIdx = (bp === state.player2) ? 2 : 1; respawnAtCheckpoint(); }
             break; // 一帧只攻击一次
         }
@@ -8196,8 +8187,10 @@ function checkCheckpoint() {
 function checkLevelComplete() {
     if (state.transitioning) return;
 
-    // 第四关：玩家触碰绿宝石即通关（boss状态不影响通关）
+    // 第四关：玩家触碰绿宝石即通关（boss必须存活，否则视为已失败）
     if (state.currentLevel === 4) {
+        // 失败优先：boss已死则不允许通关
+        if (state.enemies.length === 0) return;
         var level4 = LEVELS[3];
         if (level4.checkpoint) {
             var dist4 = Math.hypot(state.player.x + 4 - level4.checkpoint.x, state.player.y + 6 - level4.checkpoint.y);
@@ -8445,8 +8438,6 @@ function triggerBossRewind(){
 
 var bossRewinding = false;
 var bossRewindTarget = 0;
-var bossRespawnTimer = 0;
-var bossRespawnPos = { x: 420, y: 84 };
 
 function updateBossRewind(){
     if(!bossRewinding) return;
@@ -8679,17 +8670,15 @@ function performAttack(player){
                         e.x += (kbDx / kbDist) * 15;
                         e.y += (kbDy / kbDist) * 10;
                         if (e.hp <= 0) {
-                            // 第四关：Boss被击杀后自动复活，不触发gameOver
-                            var stats_bk = (player === state.player2) ? PlayerStats2 : PlayerStats;
-                            stats_bk.bossKills++;
-                            var bossOrigX = LEVELS[3].enemies[0].x;
-                            var bossOrigY = LEVELS[3].enemies[0].y;
-                            state.dyingEnemies.push(new DyingEnemy(e.x, e.y, 0));
-                            state.enemies.splice(ei, 1);
-                            triggerShake(5, 12);
-                            bossRespawnTimer = 180; // 3秒后Boss复活
-                            bossRespawnPos.x = bossOrigX;
-                            bossRespawnPos.y = bossOrigY;
+                            if (hasRewind && stateHistory.length >= 60) {
+                                state.dyingEnemies.push(new DyingEnemy(e.x, e.y, 0));
+                                triggerBossRewind();
+                            } else {
+                                state.dyingEnemies.push(new DyingEnemy(e.x, e.y, 0));
+                                state.enemies.splice(ei, 1);
+                                triggerShake(5, 12);
+                                gameOver('执念已断', '你杀了不该杀的人。按 R 重来。', true);
+                            }
                         }
                     } else {
                         e.hp--;
@@ -10198,8 +10187,25 @@ var DualFateScreen = {
         this.active = true;
         this.tick = 0;
         var df = calcDualFate();
-        // 只用HTML渲染描述文本，与单人版一致
-        fateDescText.innerText = df.desc;
+        var a = PlayerStats, b = PlayerStats2;
+        var html = '';
+        html += '<div style="text-align:center;margin-bottom:6px;">';
+        html += '<span style="font-family:SimHei,Microsoft YaHei,Noto Sans SC,sans-serif;font-size:16px;color:#ffd700;font-weight:bold;">双人命格</span>';
+        html += '</div>';
+        html += '<div style="text-align:center;margin-bottom:4px;">';
+        html += '<span style="font-family:SimHei,Microsoft YaHei,Noto Sans SC,sans-serif;font-size:13px;color:#ffd700;font-weight:bold;">' + df.nickname + '</span>';
+        html += '</div>';
+        html += '<div style="font-family:FZPixel;font-size:14px;color:#ffd700;line-height:1.5;margin-bottom:8px;">' + df.desc + '</div>';
+        html += '<div style="font-family:FZPixel;font-size:8px;color:#00cccc;line-height:1.6;">';
+        html += '总受难：' + df.totalSuffer + '&nbsp;&nbsp;总杀性：' + df.totalKill + '&nbsp;&nbsp;默契差：' + df.diff + '<br>';
+        html += '<span style="color:rgba(255,215,0,0.6);">— 玩家1 —</span><br>';
+        html += '死亡' + a.totalDeaths + ' 陷阱' + a.trapFalls + ' 飞刀' + a.knifeKilled + ' 多刀' + a.multiKnifeKilled + '<br>';
+        html += '石头' + a.rockCrushed + ' Boss' + a.bossKills + ' 回溯' + a.rewindUsed + ' 时停' + a.timeStopKills + '<br>';
+        html += '<span style="color:rgba(255,215,0,0.6);">— 玩家2 —</span><br>';
+        html += '死亡' + b.totalDeaths + ' 陷阱' + b.trapFalls + ' 飞刀' + b.knifeKilled + ' 多刀' + b.multiKnifeKilled + '<br>';
+        html += '石头' + b.rockCrushed + ' Boss' + b.bossKills + ' 回溯' + b.rewindUsed + ' 时停' + b.timeStopKills;
+        html += '</div>';
+        fateDescText.innerHTML = html;
         fateDescOverlay.style.display = 'block';
     },
 
@@ -10211,66 +10217,8 @@ var DualFateScreen = {
     draw: function(ctx) {
         if (!this.active) return;
         var w = 320, h = 180;
-
-        // 深黑背景
         ctx.fillStyle = '#06060a';
         ctx.fillRect(0, 0, w, h);
-
-        // 计算双人命格
-        var df = calcDualFate();
-        var a = PlayerStats, b = PlayerStats2;
-
-        // ---- 标题：双人命格 ----
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = "bold 16px SimHei, 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
-        ctx.fillStyle = '#ffd700';
-        ctx.fillText('双人命格', 160, 28);
-
-        // ---- 分隔线 ----
-        ctx.strokeStyle = 'rgba(255,215,0,0.4)';
-        ctx.lineWidth = 0.5;
-        ctx.beginPath(); ctx.moveTo(60, 40); ctx.lineTo(260, 40); ctx.stroke();
-
-        // ---- 命格称号 ----
-        ctx.font = "bold 12px SimHei, 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
-        ctx.fillStyle = '#ffd700';
-        ctx.fillText(df.nickname, 160, 54);
-
-        // ---- 三维数据 ----
-        ctx.font = "9px SimHei, 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
-        ctx.fillStyle = 'rgba(255,215,0,0.5)';
-        ctx.fillText('总受难：' + df.totalSuffer + '　　总杀性：' + df.totalKill + '　　默契差：' + df.diff, 160, 67);
-
-        // ---- 分隔线 ----
-        ctx.beginPath(); ctx.moveTo(60, 76); ctx.lineTo(260, 76); ctx.stroke();
-
-        // 命格描述由HTML覆盖层渲染（与单人版一致）
-
-        // ---- 分隔线 ----
-        ctx.strokeStyle = 'rgba(0,204,204,0.3)';
-        ctx.beginPath(); ctx.moveTo(60, 130); ctx.lineTo(260, 130); ctx.stroke();
-
-        // ---- 数据统计（时间静止蓝色，与单人版一致的两列布局） ----
-        ctx.font = "8px SimHei, 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
-        ctx.textAlign = 'left';
-        ctx.fillStyle = 'rgba(255,215,0,0.6)';
-        ctx.fillText('— 玩家1 —', 40, 139);
-        ctx.fillStyle = '#00cccc';
-        ctx.fillText('死' + a.totalDeaths + ' 陷' + a.trapFalls + ' 刀' + a.knifeKilled + ' 多' + a.multiKnifeKilled + ' 石' + a.rockCrushed + ' B' + a.bossKills + ' 溯' + a.rewindUsed + ' 停' + a.timeStopKills, 40, 149);
-
-        ctx.textAlign = 'right';
-        ctx.fillStyle = 'rgba(255,215,0,0.6)';
-        ctx.fillText('— 玩家2 —', 280, 139);
-        ctx.fillStyle = '#00cccc';
-        ctx.fillText('死' + b.totalDeaths + ' 陷' + b.trapFalls + ' 刀' + b.knifeKilled + ' 多' + b.multiKnifeKilled + ' 石' + b.rockCrushed + ' B' + b.bossKills + ' 溯' + b.rewindUsed + ' 停' + b.timeStopKills, 280, 149);
-
-        // ---- 按R关闭（闪烁） ----
-        ctx.textAlign = 'center';
-        var blinkA = 0.4 + Math.sin(this.tick * 0.05) * 0.3;
-        ctx.font = "8px SimHei, 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
-        ctx.fillStyle = 'rgba(255,215,0,' + blinkA + ')';
-        ctx.fillText('按 R 关闭', 160, 175);
     }
 };
 
@@ -10862,7 +10810,6 @@ function init(){
     isRewinding=false;
     bossRewinding=false;
     bossRewindTarget=0;
-    bossRespawnTimer=0;
     rewindIndex=0;
     stateHistory=[];
     lastFrameTime=performance.now();
@@ -11116,16 +11063,6 @@ function gameLoop(currentTime){
         }
     }
 
-    // 第四关：Boss自动复活计时
-    if (bossRespawnTimer > 0) {
-        bossRespawnTimer--;
-        if (bossRespawnTimer <= 0) {
-            var newBoss = new MeleeBoss(bossRespawnPos.x, bossRespawnPos.y);
-            state.enemies.push(newBoss);
-            state.effects.push({ life: 10, maxLife: 10, type: 'flash' });
-            triggerShake(2, 6);
-        }
-    }
     state.enemies.forEach(function(e){e.update(timeFactor);});
     state.projectiles.forEach(function(k){k.update(timeFactor);});
     state.projectiles=state.projectiles.filter(function(k){return k.alive;});
