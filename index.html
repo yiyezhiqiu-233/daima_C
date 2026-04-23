@@ -10445,6 +10445,16 @@ function gameWin(){
 }
 
 /* ==================== 标题画面（海面 + 小船 + 玩家） ==================== */
+/* ==================== 首次打开更新日志弹窗 ==================== */
+var PATCHLOG_KEY = 'moon_blade_patchlog_v1';
+var showPatchLog = false;
+(function() {
+    if (!localStorage.getItem(PATCHLOG_KEY)) {
+        showPatchLog = true;
+        localStorage.setItem(PATCHLOG_KEY, '1');
+    }
+})();
+
 var TitleScreen = {
     active: true,
     tick: 0,
@@ -10490,6 +10500,59 @@ var TitleScreen = {
         if (!this.active) return;
         var w = 320, h = 180;
         var t = this.tick;
+
+        // —— 更新日志弹窗 ——
+        if (showPatchLog) {
+            // 半透明遮罩
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(0, 0, w, h);
+            // 弹窗底板
+            var bw = 240, bh = 58;
+            var bx = (w - bw) / 2, by = (h - bh) / 2;
+            ctx.fillStyle = 'rgba(10,8,0,0.95)';
+            ctx.fillRect(bx, by, bw, bh);
+            // 金色边框
+            ctx.strokeStyle = '#ffd700';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(bx, by, bw, bh);
+            // 内边框
+            ctx.strokeStyle = 'rgba(200,168,0,0.3)';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(bx + 3, by + 3, bw - 6, bh - 6);
+            // 标题
+            ctx.save();
+            ctx.font = "bold 10px 'FZPixel'";
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#ffd700';
+            ctx.shadowColor = 'rgba(255,215,0,0.4)';
+            ctx.shadowBlur = 6;
+            ctx.fillText('更新日志', w / 2, by + 16);
+            ctx.restore();
+            // 内容
+            ctx.save();
+            ctx.font = "8px 'FZPixel'";
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#e8d8a0';
+            ctx.shadowColor = 'transparent';
+            ctx.fillText('修复bug--剔除第二关中卡墙敌人', w / 2, by + 33);
+            ctx.fillStyle = 'rgba(200,168,0,0.5)';
+            ctx.font = "7px 'FZPixel'";
+            ctx.fillText('2026.4.23 20:00', w / 2, by + 45);
+            ctx.restore();
+            // 关闭提示（呼吸闪烁）
+            ctx.save();
+            var closeAlpha = 0.35 + 0.25 * Math.sin(t * 0.05);
+            ctx.globalAlpha = closeAlpha;
+            ctx.font = "7px 'FZPixel'";
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#c8a800';
+            ctx.fillText('按任意键关闭', w / 2, by + bh + 12);
+            ctx.restore();
+            return; // 弹窗打开时不绘制其他内容
+        }
 
         // —— 深蓝夜空渐变背景 ——
         var skyGrad = ctx.createLinearGradient(0, 0, 0, h);
@@ -11250,6 +11313,12 @@ function gameLoop(currentTime){
 window.addEventListener('keydown',function(e){
     // 标题画面：忽略（通过按钮选择模式开始）
     if(TitleScreen.active){
+        // 更新日志弹窗：按任意键关闭
+        if(showPatchLog){
+            showPatchLog = false;
+            e.preventDefault();
+            return;
+        }
         if(showAuthorModal){
             // 反馈弹窗打开时：按Escape关闭，其余按键忽略
             if(e.key === 'Escape'){
@@ -11390,8 +11459,8 @@ requestAnimationFrame(gameLoop);
             y: (e.clientY - rect.top) * scaleY
         };
     }
-    canvas.addEventListener('mousemove', function(e) {
-        if (!TitleScreen.active) { TitleScreen.hoveredBtn = -1; return; }
+        canvas.addEventListener('mousemove', function(e) {
+        if (!TitleScreen.active || showPatchLog) { TitleScreen.hoveredBtn = -1; return; }
         var pos = getCanvasCoords(e);
         TitleScreen.hoveredBtn = -1;
         for (var i = 0; i < TitleScreen.buttons.length; i++) {
@@ -11405,6 +11474,7 @@ requestAnimationFrame(gameLoop);
     });
     canvas.addEventListener('click', function(e) {
         if (!TitleScreen.active) return;
+        if (showPatchLog) { showPatchLog = false; return; } // 更新日志弹窗打开时按任意关闭
         if (showAuthorModal) return; // HTML弹窗打开时忽略画布点击
         var pos = getCanvasCoords(e);
         for (var i = 0; i < TitleScreen.buttons.length; i++) {
